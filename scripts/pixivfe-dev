@@ -1,0 +1,11 @@
+#!/usr/bin/fish
+
+# example dev script
+
+dinitctl stop pixivfe
+cd (status dirname)/..
+set -x PIXIVFE_DEV true
+set -x PIXIVFE_REQUESTLIMIT 0
+set -x PIXIVFE_SAVE_RESPONSES true
+./build.sh watch &
+ls *.go assets/js/* {core,server,config,audit}/**.go **.templ | entr -rc pixivfe
