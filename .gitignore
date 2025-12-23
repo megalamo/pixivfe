@@ -1,6 +1,40 @@
-.vercel
-*.map
-config.yml
-tmp/
-.air.toml
-/.dir-locals.el
+# Environment files
+.env
+deploy/.env
+
+# Binary executable
+/pixivfe
+
+# i18n package artifacts
+i18n/data/*_strings.json
+
+# limiter state files
+limiter_state.json
+data/limiter_state.json
+
+# sonar-scanner-cli output
+.scannerwork
+
+# npm artifacts
+node_modules/
+package.json
+package-lock.json
+
+# Aider resources
+# ref: https://aider.chat/
+.aider*
+
+# macOS files
+.DS_Store
+*/.DS_Store
+
+# Editor configuration
+.vscode/
+.idea/
+
+# GitLab CI cache paths
+/.go/
+/.cache/
+
+# Python
+__pycache__/
