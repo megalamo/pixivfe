@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+mkdocs = "*"
+mkdocs-git-revision-date-localized-plugin = "*"
+mkdocs-glightbox = "*"
+mkdocs-material = "*"
+mkdocs-redirects = "*"
+mkdocs-table-reader-plugin = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.14"
