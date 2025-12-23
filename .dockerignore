@@ -1,0 +1,36 @@
+# Environment files
+.env
+deploy/.env
+
+# Binary executable
+/pixivfe
+
+# i18n package artifacts
+i18n/*_strings.json
+
+# limiter state files
+limiter_state.json
+data/limiter_state.json
+
+# sonar-scanner-cli output
+.scannerwork
+
+# npm artifacts
+node_modules/
+package.json
+package-lock.json
+
+# Aider resources
+# ref: https://aider.chat/
+.aider*
+
+# macOS files
+.DS_Store
+*/.DS_Store
+
+# Editor configuration
+.vscode/
+
+# GitLab CI cache paths
+/.go/
+/.cache/
