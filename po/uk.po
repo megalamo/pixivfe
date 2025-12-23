@@ -1,0 +1,288 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PixivFE v3.0.4-213-g1dbba518a\n"
+"Report-Msgid-Bugs-To: https://codeberg.org/pixivfe/pixivfe/issues\n"
+"POT-Creation-Date: 2025-09-25 05:13+0000\n"
+"PO-Revision-Date: 2025-09-25 13:04+0000\n"
+"Last-Translator: SomeTr <sometr@noreply.codeberg.org>\n"
+"Language-Team: Ukrainian <https://translate.codeberg.org/projects/pixivfe/"
+"default/uk/>\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+"X-Generator: Weblate 5.13.2\n"
+"SPDX-License-Identifier: GFDL-1.3-only\n"
+
+msgid "AI-generated"
+msgstr "Створено ШІ"
+
+msgid "AI-generated content"
+msgstr "Вміст, створений ШІ"
+
+msgid "All"
+msgstr "Усі"
+
+msgid "Apply these settings to your pixiv account (recommended)"
+msgstr ""
+"Застосувати ці налаштування до вашого облікового запису pixiv (рекомендовано)"
+
+msgid "Atom feed for {{ .user }}"
+msgstr "Стрічка Atom {{ .user }}"
+
+msgid "Atom feed for {{ .workType }} by {{ .user }}"
+msgstr "Стрічка Atom для робіт {{ .user }} {{ .workType }}"
+
+msgid "BL (yaoi)"
+msgstr "BL (яой)"
+
+msgid "Based on your combined settings, you can currently view:"
+msgstr "На основі ваших комбінованих налаштувань ви можете переглядати:"
+
+msgid "Cannot authorize with the supplied token."
+msgstr "Неможливо авторизуватися за допомогою наданого токена."
+
+msgid "Censor"
+msgstr "Розмивати"
+
+msgid "Contemporary fantasy"
+msgstr "Сучасне фентезі"
+
+msgid "Content filters"
+msgstr "Фільтри вмісту"
+
+msgid "Could not fetch user information."
+msgstr "Не вдалося отримати інформацію про користувача."
+
+msgid "Display language"
+msgstr "Мова"
+
+msgid "Drama"
+msgstr "Драма"
+
+msgid "Empty token submitted."
+msgstr "Надано порожній токен."
+
+msgid "Error processing user data."
+msgstr "Помилка під час обробки даних користувача."
+
+msgid "Essays/non-fiction"
+msgstr "Есе / Документальна література"
+
+msgid "Failed to update language."
+msgstr "Не вдалося оновити мову."
+
+msgid "Failed to update location."
+msgstr "Не вдалося оновити місцезнаходження."
+
+msgid "Failed to update reading status."
+msgstr "Не вдалося оновити прогрес читання."
+
+msgid "For kids"
+msgstr "Для дітей"
+
+msgid "Hide"
+msgstr "Приховати"
+
+msgid "Historical pieces"
+msgstr "Історичні твори"
+
+msgid "Horror"
+msgstr "Жахи"
+
+msgid "Illustration"
+msgstr "Ілюстрація"
+
+msgid "Illustrations"
+msgstr "Ілюстрації"
+
+msgid "Internal error during session setup."
+msgstr "Внутрішня помилка під час налаштування сеансу."
+
+msgid "Isekai fantasy"
+msgstr "Ісекай"
+
+msgid "Language selection is required."
+msgstr "Необхідно вибрати мову."
+
+msgid "Language updated successfully."
+msgstr "Мову успішно оновлено."
+
+msgid "Literature"
+msgstr "Література"
+
+msgid "Location is required."
+msgstr "Необхідно вказати місцезнаходження."
+
+msgid "Location updated successfully."
+msgstr "Місцезнаходження успішно оновлено."
+
+msgid "Manga"
+msgstr "Манґа"
+
+msgid "Mystery"
+msgstr "Містика"
+
+msgid "Not AI-generated"
+msgstr "Не створено ШІ"
+
+msgid "Novels"
+msgstr "Романи"
+
+msgid "Other"
+msgstr "Інше"
+
+msgid "Personalize your preferences on this PixivFE instance."
+msgstr "Налаштуйте свої уподобання на цьому екземплярі PixivFE."
+
+msgid "Poetry"
+msgstr "Поезія"
+
+msgid "Preferences summary"
+msgstr "Підсумок налаштувань"
+
+msgid "R-15 content"
+msgstr "Вміст R-15"
+
+msgid "R-18"
+msgstr "R-18"
+
+msgid "R-18 content"
+msgstr "Вміст R-18"
+
+msgid "R-18G"
+msgstr "R-18G"
+
+msgid "R-18G content"
+msgstr "Вміст R-18G"
+
+msgid "Reading status updated successfully."
+msgstr "Прогрес читання успішно оновлено."
+
+msgid "Reviews/opinion pieces"
+msgstr "Оглядові / публіцистичні статті"
+
+msgid "Romance"
+msgstr "Романтика"
+
+msgid "Safe"
+msgstr "Безпечний"
+
+msgid "Save"
+msgstr "Зберегти"
+
+msgid "Sci-fi"
+msgstr "Наукова фантастика"
+
+msgid "Screenplays/scripts"
+msgstr "Сценарії"
+
+msgid "Search"
+msgstr "Пошук"
+
+msgid "Search pixiv"
+msgstr "Пошук у pixiv"
+
+msgid ""
+"Select your preferred display language from the dropdown menu below. Note "
+"that in the case of a missing translation, English will be used instead."
+msgstr ""
+"Виберіть бажану мову відображення з випадаючого меню нижче. Зверніть увагу, "
+"що у разі відсутності перекладу буде використовуватися англійська мова."
+
+msgid "Session initialization failed."
+msgstr "Помилка ініціалізації сеансу."
+
+msgid "Session token validation failed."
+msgstr "Не вдалося перевірити токен сеансу."
+
+msgid "Settings"
+msgstr "Налаштування"
+
+msgid "Show"
+msgstr "Показати"
+
+msgid "Successfully logged in."
+msgstr "Ви успішно ввійшли."
+
+msgid "Ugoira"
+msgstr "Анімація"
+
+msgid "Unrated"
+msgstr "Без рейтингу"
+
+msgid ""
+"Update your pixiv account to match the visibility settings chosen above."
+msgstr ""
+"Оновіть свій обліковий запис pixiv відповідно до налаштувань видимості, "
+"вибраних вище."
+
+msgid "Use browser language"
+msgstr "Використовувати мову браузера"
+
+msgid "Users"
+msgstr "Користувачі"
+
+msgid "You"
+msgstr "Ви"
+
+msgid ""
+"Your content view is determined by a combination of your pixiv account "
+"settings and the local settings on this site. Local settings can only be "
+"more restrictive than your pixiv account, not less."
+msgstr ""
+"Перегляд вмісту визначається налаштуваннями вашого облікового запису pixiv, "
+"а також локальними налаштуваннями на цьому сайті. Локальними налаштуваннями "
+"може бути встановлено більше обмежень, ніж у вашому обліковому записі pixiv, "
+"але не навпаки."
+
+msgid ""
+"Your pixiv.net account hides AI-generated works, AI will be hidden "
+"regardless of the local setting."
+msgstr ""
+"Ваш обліковий запис pixiv.net приховує роботи, створені ШІ, тому вони будуть "
+"приховані незалежно від локальних налаштувань."
+
+msgid "Your pixiv.net account is set to:"
+msgstr "Ваш обліковий запис pixiv.net налаштовано так:"
+
+msgid "Yuri"
+msgstr "Юрі"
+
+msgid "{{ .accessCount }} views"
+msgstr "{{ .accessCount }} переглядів"
+
+msgid "{{ .user }}'s profile banner"
+msgstr "Банер профілю {{ .user }}"
+
+#~ msgid "AI works visibility updated successfully."
+#~ msgstr "Видимість робіт ШІ успішно оновлено."
+
+#~ msgid "Content visibility level is required."
+#~ msgstr "Необхідно вказати рівень видимості вмісту."
+
+#~ msgid "Content visibility settings updated successfully."
+#~ msgstr "Налаштування видимості вмісту успішно оновлено."
+
+#~ msgid "Failed to update AI works visibility."
+#~ msgstr "Не вдалося оновити видимість робіт ШІ."
+
+#~ msgid "Failed to update sensitive view setting."
+#~ msgstr "Не вдалося оновити налаштування перегляду делікатного вмісту."
+
+#~ msgid "Failed to update user restrict setting."
+#~ msgstr "Не вдалося оновити налаштування обмеження користувачів."
+
+#~ msgid "Invalid AI works visibility setting."
+#~ msgstr "Неправильне налаштування видимості робіт ШІ."
+
+#~ msgid "Invalid AI works visibility setting: {{.Value}}."
+#~ msgstr "Неправильне налаштування видимості робіт ШІ: {{.Value}}."
+
+#~ msgid "Invalid content visibility level."
+#~ msgstr "Недійсний рівень видимості вмісту."
+
+#~ msgid "Invalid content visibility level: {{.Level}}."
+#~ msgstr "Недійсний рівень видимості вмісту: {{.Level}}."

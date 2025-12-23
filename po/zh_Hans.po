@@ -1,0 +1,276 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PixivFE v3.0.4-191-gd38a2eadd\n"
+"Report-Msgid-Bugs-To: https://codeberg.org/pixivfe/pixivfe/issues\n"
+"POT-Creation-Date: 2025-09-25 05:13+0000\n"
+"PO-Revision-Date: 2025-09-25 13:04+0000\n"
+"Last-Translator: Hayden <hayden@haydenwu.org>\n"
+"Language-Team: Chinese (Simplified Han script) <https://"
+"translate.codeberg.org/projects/pixivfe/default/zh_Hans/>\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.13.2\n"
+
+msgid "AI-generated"
+msgstr "AI 生成"
+
+msgid "AI-generated content"
+msgstr "AI 生成内容"
+
+msgid "All"
+msgstr "全部"
+
+msgid "Apply these settings to your pixiv account (recommended)"
+msgstr "将设置应用于你的 pixiv 账户（推荐）"
+
+msgid "Atom feed for {{ .user }}"
+msgstr "{{ .user }} 的 Atom 订阅源"
+
+msgid "Atom feed for {{ .workType }} by {{ .user }}"
+msgstr "由 {{ .user }} 发布的 {{ .workType }} 的 Atom 订阅源"
+
+msgid "BL (yaoi)"
+msgstr "BL（耽美）"
+
+msgid "Based on your combined settings, you can currently view:"
+msgstr "结合各项设置，你目前可以浏览："
+
+msgid "Cannot authorize with the supplied token."
+msgstr "无法使用提供的令牌进行授权。"
+
+msgid "Censor"
+msgstr "遮盖"
+
+msgid "Contemporary fantasy"
+msgstr "现代奇幻"
+
+msgid "Content filters"
+msgstr "内容过滤"
+
+msgid "Could not fetch user information."
+msgstr "无法获取用户信息。"
+
+msgid "Display language"
+msgstr "显示语言"
+
+msgid "Drama"
+msgstr "剧情"
+
+msgid "Empty token submitted."
+msgstr "提交的令牌为空。"
+
+msgid "Error processing user data."
+msgstr "处理用户数据时出错。"
+
+msgid "Essays/non-fiction"
+msgstr "随笔/非虚构"
+
+msgid "Failed to update language."
+msgstr "更新语言失败。"
+
+msgid "Failed to update location."
+msgstr "更新所在地失败。"
+
+msgid "Failed to update reading status."
+msgstr "更新阅读状态失败。"
+
+msgid "For kids"
+msgstr "儿童向"
+
+msgid "Hide"
+msgstr "隐藏"
+
+msgid "Historical pieces"
+msgstr "历史题材"
+
+msgid "Horror"
+msgstr "恐怖"
+
+msgid "Illustration"
+msgstr "插画"
+
+msgid "Illustrations"
+msgstr "插图"
+
+msgid "Internal error during session setup."
+msgstr "在会话初始化期间发生内部错误。"
+
+msgid "Isekai fantasy"
+msgstr "异世界奇幻"
+
+msgid "Language selection is required."
+msgstr "必须选择语言。"
+
+msgid "Language updated successfully."
+msgstr "语言更新成功。"
+
+msgid "Literature"
+msgstr "文学"
+
+msgid "Location is required."
+msgstr "必须提供所在地。"
+
+msgid "Location updated successfully."
+msgstr "所在地更新成功。"
+
+msgid "Manga"
+msgstr "漫画"
+
+msgid "Mystery"
+msgstr "悬疑"
+
+msgid "Not AI-generated"
+msgstr "非 AI 生成"
+
+msgid "Novels"
+msgstr "小说"
+
+msgid "Other"
+msgstr "其他"
+
+msgid "Personalize your preferences on this PixivFE instance."
+msgstr "在此 PixivFE 实例上调整你的偏好设置。"
+
+msgid "Poetry"
+msgstr "诗歌"
+
+msgid "Preferences summary"
+msgstr "偏好概览"
+
+msgid "R-15 content"
+msgstr "R-15 内容"
+
+msgid "R-18"
+msgstr "R-18"
+
+msgid "R-18 content"
+msgstr "R-18 内容"
+
+msgid "R-18G"
+msgstr "R-18G"
+
+msgid "R-18G content"
+msgstr "R-18G 内容"
+
+msgid "Reading status updated successfully."
+msgstr "阅读状态更新成功。"
+
+msgid "Reviews/opinion pieces"
+msgstr "评论/观点"
+
+msgid "Romance"
+msgstr "恋爱"
+
+msgid "Safe"
+msgstr "全年龄"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Sci-fi"
+msgstr "科幻"
+
+msgid "Screenplays/scripts"
+msgstr "剧本/脚本"
+
+msgid "Search"
+msgstr "搜索"
+
+msgid "Search pixiv"
+msgstr "搜索 pixiv"
+
+msgid ""
+"Select your preferred display language from the dropdown menu below. Note "
+"that in the case of a missing translation, English will be used instead."
+msgstr ""
+"请在下方下拉菜单中选择你偏好的显示语言。若缺少相应翻译，将改用英语显示。"
+
+msgid "Session initialization failed."
+msgstr "会话初始化失败。"
+
+msgid "Session token validation failed."
+msgstr "会话令牌验证失败。"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Show"
+msgstr "展示"
+
+msgid "Successfully logged in."
+msgstr "登录成功。"
+
+msgid "Ugoira"
+msgstr "动图"
+
+msgid "Unrated"
+msgstr "未分级"
+
+msgid ""
+"Update your pixiv account to match the visibility settings chosen above."
+msgstr "更新 pixiv 账号，匹配以上选择的可见性设置。"
+
+msgid "Use browser language"
+msgstr "使用浏览器语言"
+
+msgid "Users"
+msgstr "用户"
+
+msgid "You"
+msgstr "你"
+
+msgid ""
+"Your content view is determined by a combination of your pixiv account "
+"settings and the local settings on this site. Local settings can only be "
+"more restrictive than your pixiv account, not less."
+msgstr ""
+
+msgid ""
+"Your pixiv.net account hides AI-generated works, AI will be hidden "
+"regardless of the local setting."
+msgstr "你的 pixiv.net 账户已隐藏 AI 生成作品，无论本地设置如何其均会被隐藏。"
+
+msgid "Your pixiv.net account is set to:"
+msgstr "你的 pixiv.net 账户被设置为："
+
+msgid "Yuri"
+msgstr "百合"
+
+msgid "{{ .accessCount }} views"
+msgstr "{{ .accessCount }} 次浏览"
+
+msgid "{{ .user }}'s profile banner"
+msgstr "{{ .user }} 的个人主页横幅"
+
+#~ msgid "AI works visibility updated successfully."
+#~ msgstr "已成功更新 AI 作品的可见性。"
+
+#~ msgid "Content visibility level is required."
+#~ msgstr "必须提供内容可见性级别。"
+
+#~ msgid "Content visibility settings updated successfully."
+#~ msgstr "内容可见性设置更新成功。"
+
+#~ msgid "Failed to update AI works visibility."
+#~ msgstr "更新 AI 作品可见性失败。"
+
+#~ msgid "Failed to update sensitive view setting."
+#~ msgstr "更新敏感内容查看设置失败。"
+
+#~ msgid "Failed to update user restrict setting."
+#~ msgstr "更新用户限制设置失败。"
+
+#~ msgid "Invalid AI works visibility setting."
+#~ msgstr "AI 作品可见性设置无效。"
+
+#~ msgid "Invalid AI works visibility setting: {{.Value}}."
+#~ msgstr "该 AI 作品可见性设置无效：{{.Value}}。"
+
+#~ msgid "Invalid content visibility level."
+#~ msgstr "内容可见性级别无效。"
+
+#~ msgid "Invalid content visibility level: {{.Level}}."
+#~ msgstr "该内容可见性级别无效：{{.Level}}。"

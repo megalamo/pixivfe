@@ -1,0 +1,251 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PixivFE v3.0.4-191-gd38a2eadd\n"
+"Report-Msgid-Bugs-To: https://codeberg.org/pixivfe/pixivfe/issues\n"
+"POT-Creation-Date: 2025-09-25 05:13+0000\n"
+"PO-Revision-Date: 2025-10-26 16:10+0000\n"
+"Last-Translator: OpenAI <noreply-mt-openai@weblate.org>\n"
+"Language-Team: Vietnamese <https://translate.codeberg.org/projects/pixivfe/"
+"default/vi/>\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.13.3\n"
+
+msgid "AI-generated"
+msgstr "Do AI tạo"
+
+msgid "AI-generated content"
+msgstr "Nội dung do AI tạo"
+
+msgid "All"
+msgstr "Tất cả"
+
+msgid "Apply these settings to your pixiv account (recommended)"
+msgstr "Áp dụng cài đặt này cho tài khoản pixiv của bạn (được đề xuất)"
+
+msgid "Atom feed for {{ .user }}"
+msgstr "Atom feed của {{ .user }}"
+
+msgid "Atom feed for {{ .workType }} by {{ .user }}"
+msgstr "Nguồn cấp dữ liệu Atom cho {{ .workType }} của {{ .user }}"
+
+msgid "BL (yaoi)"
+msgstr "Đam mỹ (yaoi)"
+
+msgid "Based on your combined settings, you can currently view:"
+msgstr "Dựa trên tổng hợp cài đặt của bạn, hiện tại bạn có thể xem:"
+
+msgid "Cannot authorize with the supplied token."
+msgstr "Không thể ủy quyền bằng token đã cung cấp."
+
+msgid "Censor"
+msgstr "Che"
+
+msgid "Contemporary fantasy"
+msgstr "Giả tưởng đương đại"
+
+msgid "Content filters"
+msgstr "Bộ lọc nội dung"
+
+msgid "Could not fetch user information."
+msgstr "Không thể lấy thông tin người dùng."
+
+msgid "Display language"
+msgstr "Ngôn ngữ hiển thị"
+
+msgid "Drama"
+msgstr "Chính kịch"
+
+msgid "Empty token submitted."
+msgstr "Không có token nào được cung cấp."
+
+msgid "Error processing user data."
+msgstr "Lỗi khi xử lý dữ liệu người dùng."
+
+msgid "Essays/non-fiction"
+msgstr "Tản văn/phi viễn tưởng"
+
+msgid "Failed to update language."
+msgstr "Không thể cập nhật ngôn ngữ."
+
+msgid "Failed to update location."
+msgstr "Không thể cập nhật vị trí."
+
+msgid "Failed to update reading status."
+msgstr "Không thể cập nhật trạng thái đọc."
+
+msgid "For kids"
+msgstr "Dành cho thiếu nhi"
+
+msgid "Hide"
+msgstr "Ẩn"
+
+msgid "Historical pieces"
+msgstr "Tác phẩm lịch sử"
+
+msgid "Horror"
+msgstr "Kinh dị"
+
+msgid "Illustration"
+msgstr "Tranh minh họa"
+
+msgid "Illustrations"
+msgstr "Tranh minh họa"
+
+msgid "Internal error during session setup."
+msgstr "Lỗi server trong quá trình thiết lập phiên."
+
+msgid "Isekai fantasy"
+msgstr "Dị giới (isekai)"
+
+msgid "Language selection is required."
+msgstr "Ngôn ngữ phải được lựa chọn."
+
+msgid "Language updated successfully."
+msgstr "Cập nhật ngôn ngữ thành công."
+
+msgid "Literature"
+msgstr "Văn học"
+
+msgid "Location is required."
+msgstr "Vị trí phải được cung cấp."
+
+msgid "Location updated successfully."
+msgstr "Cập nhật vị trí thành công."
+
+msgid "Manga"
+msgstr "Truyện tranh (manga)"
+
+msgid "Mystery"
+msgstr "Huyền bí"
+
+msgid "Not AI-generated"
+msgstr "Không do AI tạo"
+
+msgid "Novels"
+msgstr "Tiểu thuyết"
+
+msgid "Other"
+msgstr "Khác"
+
+msgid "Personalize your preferences on this PixivFE instance."
+msgstr "Cá nhân hóa các tùy chọn của bạn trên máy chủ PixivFE này."
+
+msgid "Poetry"
+msgstr "Thơ"
+
+msgid "Preferences summary"
+msgstr "Tổng quan các cài đặt"
+
+msgid "R-15 content"
+msgstr "Nội dung R-15"
+
+msgid "R-18"
+msgstr ""
+
+msgid "R-18 content"
+msgstr ""
+
+msgid "R-18G"
+msgstr ""
+
+msgid "R-18G content"
+msgstr ""
+
+msgid "Reading status updated successfully."
+msgstr ""
+
+msgid "Reviews/opinion pieces"
+msgstr ""
+
+msgid "Romance"
+msgstr ""
+
+msgid "Safe"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Sci-fi"
+msgstr ""
+
+msgid "Screenplays/scripts"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "Search pixiv"
+msgstr ""
+
+msgid ""
+"Select your preferred display language from the dropdown menu below. Note "
+"that in the case of a missing translation, English will be used instead."
+msgstr ""
+
+msgid "Session initialization failed."
+msgstr ""
+
+msgid "Session token validation failed."
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Show"
+msgstr ""
+
+msgid "Successfully logged in."
+msgstr ""
+
+msgid "Ugoira"
+msgstr ""
+
+msgid "Unrated"
+msgstr ""
+
+msgid ""
+"Update your pixiv account to match the visibility settings chosen above."
+msgstr ""
+
+msgid "Use browser language"
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "You"
+msgstr ""
+
+msgid ""
+"Your content view is determined by a combination of your pixiv account "
+"settings and the local settings on this site. Local settings can only be "
+"more restrictive than your pixiv account, not less."
+msgstr ""
+
+msgid ""
+"Your pixiv.net account hides AI-generated works, AI will be hidden "
+"regardless of the local setting."
+msgstr ""
+
+msgid "Your pixiv.net account is set to:"
+msgstr ""
+
+msgid "Yuri"
+msgstr ""
+
+msgid "{{ .accessCount }} views"
+msgstr ""
+
+msgid "{{ .user }}'s profile banner"
+msgstr ""
+
+#~ msgid "AI works visibility updated successfully."
+#~ msgstr "Cài đặt hiển thị tác phẩm AI đã được cập nhật thành công."
+
+#~ msgid "Failed to update user restrict setting."
+#~ msgstr "Không thể cập nhật cài đặt hạn chế người dùng."

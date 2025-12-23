@@ -1,0 +1,287 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PixivFE v3.0.4-213-g1dbba518a\n"
+"Report-Msgid-Bugs-To: https://codeberg.org/pixivfe/pixivfe/issues\n"
+"POT-Creation-Date: 2025-09-25 05:13+0000\n"
+"PO-Revision-Date: 2025-09-25 13:04+0000\n"
+"Last-Translator: Vyxie <kitakita@disroot.org>\n"
+"Language-Team: Filipino <https://translate.codeberg.org/projects/pixivfe/"
+"default/fil/>\n"
+"Language: fil\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1 && n != 2 && n != 3 && (n % 10 == 4 "
+"|| n % 10 == 6 || n % 10 == 9);\n"
+"X-Generator: Weblate 5.13.2\n"
+"SPDX-License-Identifier: GFDL-1.3-only\n"
+
+msgid "AI-generated"
+msgstr "Binuo ng AI"
+
+msgid "AI-generated content"
+msgstr "Nilalamang binuo ng AI"
+
+msgid "All"
+msgstr "Lahat"
+
+msgid "Apply these settings to your pixiv account (recommended)"
+msgstr "Iimbak ang mga setting na ito sa iyong pixiv account (inirerekomenda)"
+
+msgid "Atom feed for {{ .user }}"
+msgstr "Atom feed para sa user na {{ .user }}"
+
+msgid "Atom feed for {{ .workType }} by {{ .user }}"
+msgstr "Atom feed para sa {{ .workType }} ni/ng {{ .user }}"
+
+msgid "BL (yaoi)"
+msgstr "BL (yaoi)"
+
+msgid "Based on your combined settings, you can currently view:"
+msgstr "Base sa iyong mga setting, maaari mong itignan ang:"
+
+msgid "Cannot authorize with the supplied token."
+msgstr "Hindi maka-authorize gamit ang ibinigay na token."
+
+msgid "Censor"
+msgstr "I-censor"
+
+msgid "Contemporary fantasy"
+msgstr "Kontemporaryong pantasya"
+
+msgid "Content filters"
+msgstr "Mga filter ng nilalaman"
+
+msgid "Could not fetch user information."
+msgstr "Hindi makuha ang impormasyon ng user."
+
+msgid "Display language"
+msgstr "Wika ng interface"
+
+msgid "Drama"
+msgstr "Dula"
+
+msgid "Empty token submitted."
+msgstr "Walang ibinigay na token."
+
+msgid "Error processing user data."
+msgstr "Hindi maproseso ang user data."
+
+msgid "Essays/non-fiction"
+msgstr "Mga sanaysay/non-fiction"
+
+msgid "Failed to update language."
+msgstr "Nabigong i-update ang wika."
+
+msgid "Failed to update location."
+msgstr "Nabigong i-update ang lokasyon."
+
+msgid "Failed to update reading status."
+msgstr "Nabigong i-update ang status ng pagbabasa."
+
+msgid "For kids"
+msgstr "Para sa mga bata"
+
+msgid "Hide"
+msgstr "Itago"
+
+msgid "Historical pieces"
+msgstr "Makasaysayang mga piraso"
+
+msgid "Horror"
+msgstr "Katatakutan"
+
+msgid "Illustration"
+msgstr "Larawan"
+
+msgid "Illustrations"
+msgstr "Mga Larawan"
+
+msgid "Internal error during session setup."
+msgstr "Panloob na error habang sine-set up ang session."
+
+msgid "Isekai fantasy"
+msgstr "Isekai na pantasya"
+
+msgid "Language selection is required."
+msgstr "Kinakailangan ang piniling wika."
+
+msgid "Language updated successfully."
+msgstr "Matagumpay na na-update ang wika."
+
+msgid "Literature"
+msgstr "Panitikan"
+
+msgid "Location is required."
+msgstr "Kinakailangan ang lokasyon."
+
+msgid "Location updated successfully."
+msgstr "Matagumpay na na-update ang lokasyon."
+
+msgid "Manga"
+msgstr "Manga"
+
+msgid "Mystery"
+msgstr "Misteryo"
+
+msgid "Not AI-generated"
+msgstr "Hindi binuo ng AI"
+
+msgid "Novels"
+msgstr "Mga Nobela"
+
+msgid "Other"
+msgstr "Iba"
+
+msgid "Personalize your preferences on this PixivFE instance."
+msgstr "I-personalize ang iyong mga kagustuhan sa PixivFE instance na ito."
+
+msgid "Poetry"
+msgstr "Tula"
+
+msgid "Preferences summary"
+msgstr "Buod ng mga kagustuhan"
+
+msgid "R-15 content"
+msgstr "R-15 na nilalaman"
+
+msgid "R-18"
+msgstr "R-18"
+
+msgid "R-18 content"
+msgstr "R-18 na nilalaman"
+
+msgid "R-18G"
+msgstr "R-18G"
+
+msgid "R-18G content"
+msgstr "R-18G na nilalaman"
+
+msgid "Reading status updated successfully."
+msgstr "Matagumpay na na-update ang status ng pagbabasa."
+
+msgid "Reviews/opinion pieces"
+msgstr "Mga review/opinyon"
+
+msgid "Romance"
+msgstr "Pagmamahalan"
+
+msgid "Safe"
+msgstr "Ligtas"
+
+msgid "Save"
+msgstr "I-save"
+
+msgid "Sci-fi"
+msgstr "Sayens piksyon"
+
+msgid "Screenplays/scripts"
+msgstr "Senaryo/mga script"
+
+msgid "Search"
+msgstr "Maghanap"
+
+msgid "Search pixiv"
+msgstr "Maghanap sa pixiv"
+
+msgid ""
+"Select your preferred display language from the dropdown menu below. Note "
+"that in the case of a missing translation, English will be used instead."
+msgstr ""
+"Piliin ang iyong gustong wika sa dropdown menu sa ibaba. Tandaan na sa "
+"pagkakataon na walang pagsasalin, gagamitin ang Ingles sa halip."
+
+msgid "Session initialization failed."
+msgstr "Nabigo ang pag-initialize ng session."
+
+msgid "Session token validation failed."
+msgstr "Nabigo ang pag-validate ng session token."
+
+msgid "Settings"
+msgstr "Mga Setting"
+
+msgid "Show"
+msgstr "Ipakita"
+
+msgid "Successfully logged in."
+msgstr "Matagumpay na naka-log in."
+
+msgid "Ugoira"
+msgstr "Ugoira"
+
+msgid "Unrated"
+msgstr "Hindi naka-rate"
+
+msgid ""
+"Update your pixiv account to match the visibility settings chosen above."
+msgstr ""
+"I-update ang iyong pixiv account para matugma ang mga setting ng pagpapakita "
+"na pinili sa itaas."
+
+msgid "Use browser language"
+msgstr "Gamitin ang wika ng browser"
+
+msgid "Users"
+msgstr "Mga User"
+
+msgid "You"
+msgstr "Ikaw"
+
+msgid ""
+"Your content view is determined by a combination of your pixiv account "
+"settings and the local settings on this site. Local settings can only be "
+"more restrictive than your pixiv account, not less."
+msgstr ""
+"Ang iyong pagtingin ng nilalaman ay tinutukoy sa pagsasama ng mga setting ng "
+"iyong pixiv account at ang mga lokal na setting sa site na ito. Ang mga "
+"lokal na setting ay maaari lamang maging mas mahigpit kaysa sa iyong pixiv "
+"account, hindi mabawasan."
+
+msgid ""
+"Your pixiv.net account hides AI-generated works, AI will be hidden "
+"regardless of the local setting."
+msgstr ""
+"Tinatago ng iyong pixiv.net account ang mga gawang binuo ng AI. Itatago ang "
+"AI hindi alintana sa local na setting."
+
+msgid "Your pixiv.net account is set to:"
+msgstr "Ang iyong pixiv.net account ay itinakda na:"
+
+msgid "Yuri"
+msgstr "Yuri"
+
+msgid "{{ .accessCount }} views"
+msgstr "{{ .accessCount }} mga pagtingin"
+
+msgid "{{ .user }}'s profile banner"
+msgstr "Banner ng profile ni/ng {{ .user }}"
+
+#~ msgid "AI works visibility updated successfully."
+#~ msgstr "Matagumpay na na-update ang pagpapakita ng mga gawang AI."
+
+#~ msgid "Content visibility level is required."
+#~ msgstr "Kinakailangan ang antas ng visibility ng nilalaman."
+
+#~ msgid "Content visibility settings updated successfully."
+#~ msgstr "Matagumpay na na-update ang mga setting ng visibility ng nilalaman."
+
+#~ msgid "Failed to update AI works visibility."
+#~ msgstr "Nabigong i-update ang visibility ng gawa ng AI."
+
+#~ msgid "Failed to update sensitive view setting."
+#~ msgstr "Nabigong i-update ang setting ng sensitibong pagpapakita."
+
+#~ msgid "Failed to update user restrict setting."
+#~ msgstr "Nabigong i-update ang setting ng pagbabawal ng user."
+
+#~ msgid "Invalid AI works visibility setting."
+#~ msgstr "Hindi wastong setting ng pagpapakita ng gawa ng AI."
+
+#~ msgid "Invalid AI works visibility setting: {{.Value}}."
+#~ msgstr "Hindi wastong setting ng pagpapakita ng gawa ng AI: {{.Value}}."
+
+#~ msgid "Invalid content visibility level."
+#~ msgstr "Hindi wastong antas ng pagpakita ng nilalaman."
+
+#~ msgid "Invalid content visibility level: {{.Level}}."
+#~ msgstr "Hindi wastong antas ng pagpapakita ng nilalaman: {{.Level}}."
