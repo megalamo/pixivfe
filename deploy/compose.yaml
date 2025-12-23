@@ -1,0 +1,50 @@
+# compose.yaml
+#
+# This Docker Compose file deploys PixivFE by itself.
+#
+# To run:
+#   docker compose -f compose.yaml up --build
+#
+# To access pixivfe:
+#   Visit http://pixivfe.localhost:8282/ in your browser.
+
+services:
+  pixivfe:
+    container_name: pixivfe
+    hostname: pixivfe
+    # If you want the latest updates from the v3 branch,
+    # specify the `next` tag instead of `latest`.
+    image: registry.gitlab.com/pixivfe/pixivfe:latest
+    build:
+      context: ../.
+      dockerfile: build/Dockerfile
+    init: true
+    ports:
+      # If you are not using a reverse proxy, specify 0.0.0.0 for host_ip.
+      - name: http
+        target: 8282
+        host_ip: 127.0.0.1
+        published: 8282
+        protocol: tcp
+        app_protocol: http
+    env_file:
+      - path: .env
+        required: false
+        # In case the compose.yaml is being called from the project root.
+      - path: ../.env
+        required: false
+    volumes:
+      - type: volume
+        source: limiter_state
+        target: /app/data
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    read_only: false # This can be set to true if not using the limiter.
+    user: 10001:10001
+    security_opt:
+      - no-new-privileges:true
+    tty: true # Allocate a pseudo-TTY for log output with colors.
+
+volumes:
+  limiter_state: {}

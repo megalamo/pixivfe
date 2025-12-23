@@ -1,0 +1,81 @@
+# PixivFE configuration (via configuration file)
+#
+# Copy this file to config.yaml and customize the values below.
+#
+# Refer to https://pixivfe-docs.pages.dev/hosting/configuration-options/ for more information.
+#
+# This file was auto-generated using go run ./cmd/genconfig.
+
+basic:
+  # host: localhost
+  # port: "8282"
+  # unixSocket: ""
+  # unixSocketPermissions: ""
+  # unixSocketUser: ""
+  # unixSocketGroup: ""
+  # -- This field uses the value of your pixiv account's PHPSESSID cookie
+  # ref: https://pixivfe-docs.pages.dev/hosting/api-authentication/
+  token:
+  - 123456_arstdhnei
+  # secret: ""
+
+contentProxies:
+  # imageProxy: /proxy/i.pximg.net
+  # staticProxy: /proxy/s.pximg.net
+  # ugoiraProxy: /proxy/ugoira.com
+
+tokenManager:
+  # tokenLoadBalancing: round-robin
+  # tokenMaxRetries: 5
+  # tokenBaseTimeout: 1s
+  # tokenMaxBackoffTime: 32s
+
+cache:
+  # enabled: false
+  # cacheSize: 100
+  # cacheTTL: 1h0m0s
+
+httpCache:
+  # cacheControlMaxAge: 30s
+  # cacheControlStaleWhileRevalidate: 1m0s
+
+request:
+  # acceptLanguage: en-US,en;q=0.5
+
+response:
+  # earlyHintsResponses: false
+
+feature:
+  # popularSearch: false
+  # fastTagSuggestions: false
+  # openAllButton: false
+
+instance:
+  # repoUrl: https://codeberg.org/PixivFE/PixivFE
+
+development:
+  # inDevelopment: false
+  # saveResponses: false
+  # responseSaveLocation: /tmp/pixivfe/responses
+
+log:
+  # logLevel: info
+  # logOutputs:
+  # - /dev/stderr
+  # logFormat: console
+
+limiter:
+  # enabled: false
+  # stateFilepath: ./data/limiter_state.json
+  # passList: []
+  # blockList: []
+  # filterLocal: false
+  # ipv4Prefix: 24
+  # ipv6Prefix: 48
+  # checkHeaders: true
+  # detectionMethod: ""
+  # turnstileSitekey: ""
+  # turnstileSecretKey: ""
+
+internationalization:
+  # strictMissingKeys: false
