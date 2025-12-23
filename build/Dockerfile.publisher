@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+
+FROM quay.io/buildah/stable:v1.40.1
+
+# Pinned versions
+ENV SKOPEO_VERSION=1:1.19.0-2.fc42
+ENV JQ_VERSION=1.7.1-11.fc42
+ENV COSIGN_VERSION=v2.5.2
+ENV SYFT_VERSION=v1.27.1
+
+# Install dependencies needed for publishing images and packages.
+# cosign and syft are installed from GitHub releases as they are not in the default repos.
+RUN dnf install -y \
+  skopeo-${SKOPEO_VERSION} \
+  jq-${JQ_VERSION} \
+  && dnf clean all && \
+  curl -sL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" -o /usr/local/bin/cosign && \
+  chmod +x /usr/local/bin/cosign && \
+  curl -sL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.rpm" -o /tmp/syft.rpm && \
+  dnf install -y /tmp/syft.rpm && \
+  rm -f /tmp/syft.rpm

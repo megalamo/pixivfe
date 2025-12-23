@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+
+# -- Dockerfile.wrangler
+# Provides a pre-installed Wrangler for publishing documentation.
+FROM node:24.2.0-alpine3.22
+
+ENV WRANGLER_SEND_METRICS=false
+
+# Pin Wrangler version.
+# ref: https://github.com/cloudflare/workers-sdk/releases
+RUN npm install wrangler@4.24.0 --global

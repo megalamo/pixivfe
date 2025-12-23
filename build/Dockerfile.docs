@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+
+# -- Dockerfile.docs
+# Provides dependencies for documentation jobs.
+FROM docker.io/library/python:3.12.11-alpine3.22
+
+# ref: https://pypi.org/project/pipenv/#history
+RUN pip install --no-cache-dir pipenv==2025.0.3
+
+RUN apk add --no-cache git~=2.49

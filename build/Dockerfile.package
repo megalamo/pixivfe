@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+
+# -- Dockerfile.package
+# Used by the CI pipeline to package pre-compiled binaries as OCI images.
+
+# -- Helper stage
+# Provides static assets for the release stage.
+FROM docker.io/library/alpine:3.22.0 as helper
+RUN echo "pixivfe:x:10001:10001::/:/" >> /etc/passwd
+
+# -- Release stage
+# Creates the final, minimal image from scratch.
+FROM scratch
+
+ARG TARGETPLATFORM
+
+COPY --from=helper /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=helper /etc/passwd /etc/passwd
+
+COPY ${TARGETPLATFORM}/pixivfe /app/pixivfe
+
+WORKDIR /app
+
+EXPOSE 8282
+
+USER pixivfe
+
+ENTRYPOINT ["/app/pixivfe"]
