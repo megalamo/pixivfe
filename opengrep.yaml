@@ -1,0 +1,97 @@
+#!/usr/bin/env -S opengrep scan -f
+
+rules:
+  - id: "go.lang.performance.local-regexp-compilation.local-regexp-compilation"
+    message: "regexp.MustCompile was used inside a function. Compile regular expressions at the global scope for performance."
+    languages: [go]
+    severity: ERROR
+    patterns:
+      - pattern-inside: |
+          func $F(...) {
+          ...
+          }
+      - pattern: |
+          $VAR := regexp.MustCompile($PATT)
+    fix: |
+      var $VAR = regexp.MustCompile($PATT)
+
+  - id: "go.lang.style.regexp-naming-convention.regexp-naming-convention"
+    message: "Regexp variables should be named with a `Regexp` suffix (e.g., `userRegexp` instead of `userRegex` or `userRe`)."
+    languages: [go]
+    severity: INFO
+    patterns:
+      - pattern-either:
+          - pattern: |
+              var $VAR = regexp.MustCompile(...)
+          - pattern: |
+              $VAR := regexp.MustCompile(...)
+      - metavariable-pattern:
+          metavariable: $VAR
+          language: generic
+          patterns:
+            - pattern-regex: ".*"
+            - pattern-not-regex: "Regexp$"
+            - pattern-not-regex: "^_$"
+
+  - id: "go.lang.inventory.i18n-messages.i18n-messages"
+    message: "i18n message: $MSG_LITERAL"
+    languages: [go]
+    severity: INVENTORY
+    pattern-either:
+      - patterns:
+          - pattern: l.Tr($MSG_LITERAL)
+          - focus-metavariable: $MSG_LITERAL
+      - patterns:
+          - pattern: i18n.Tr($CTX, $MSG_LITERAL, ...)
+          - focus-metavariable: $MSG_LITERAL
+      - patterns:
+          - pattern: i18n.TrC($CTX, $C, $MSG_LITERAL, ...)
+          - focus-metavariable: $MSG_LITERAL
+      - patterns:
+          - pattern: i18n.MsgKey($MSG_LITERAL)
+          - focus-metavariable: $MSG_LITERAL
+    metavariable-pattern:
+      metavariable: $MSG_LITERAL
+      pattern: '"..."'
+
+  - id: "generic.license.missing-spdx-header.missing-spdx-header"
+    patterns:
+      - pattern: $...
+      - pattern-not-regex: "SPDX-License-Identifier:"
+    languages:
+      - generic
+    message: "Missing SPDX license header at top of file"
+    severity: ERROR
+    paths:
+      exclude:
+        - "*.md"
+        - "*.json"
+        - "*.yaml"
+        - "*.yml"
+        - ".gitlab-ci.yml" # Explicit exclusion needed for some reason
+        - "*.sh"
+        - "*.fish"
+        - "htmx@2.0.4.js"
+        - "htmx@2.0.4.min.js"
+        - "response-targets@2.0.3.min.js"
+
+  - id: "generic.style.pixiv-casing.pixiv-casing"
+    message: "Use lowercase 'pixiv' for consistency"
+    severity: INFO
+    languages: [generic]
+    pattern-regex: \bPixiv\b
+    fix: pixiv
+    paths:
+      exclude:
+        - "*.json"
+
+  # FIXME: This rule incorrectly flags exported struct fields and types
+  - id: "generic.style.pixivision-casing.pixivision-casing"
+    message: "Use lowercase 'pixivision' for consistency"
+    severity: INFO
+    languages: [generic]
+    pattern-regex: \bPixivision\b
+    fix: pixivision
+    paths:
+      exclude:
+        - "*.json"

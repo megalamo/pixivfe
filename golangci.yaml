@@ -1,0 +1,54 @@
+# Configuration for golangci-lint, a fast linters runner for Go.
+# ref: https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
+version: "2"
+
+linters:
+  # Default set of linters.
+  default: all
+
+  disable:
+    - cyclop
+    - gocyclo
+    - funlen
+    - gocognit
+    - varnamelen
+    - exhaustive
+    - tagalign
+    - canonicalheader
+    - lll
+    - gosmopolitan
+    - musttag
+    - noinlineerr
+    - testpackage
+    - maintidx
+    - wsl               # Deprecated, we use wsl_v5 instead
+    - depguard          # not particularly useful in our environment, maybe later
+    - exhaustruct       # not useful
+    - gochecknoglobals  # we use global variables
+    - ireturn           # not useful
+    - tagliatelle       # the pixiv API uses snake_case keys
+    - wrapcheck         # later
+
+  settings:
+    # errcheck checks that you checked errors.
+    # ref: https://github.com/kisielk/errcheck
+    errcheck:
+      # List of functions to exclude from checking, where each entry is a single function to exclude.
+      # ref: https://github.com/kisielk/errcheck#excluding-functions
+      exclude-functions:
+        - (io.ReadCloser).Close
+        - (io/fs.File).Close
+        # - (github.com/a-h/templ.Component).Render
+
+    # Go analyzer checking that the length of a variable's name matches its usage scope.
+    # ref: https://github.com/blizzy78/varnamelen
+    varnamelen:
+      # Optional list of variable declarations that should be ignored completely.
+      ignore-decls:
+        - w http.ResponseWriter
+        - r *http.Request
+        - ua string # abbreviation for "user agent"
+        - ok bool
+        - wg sync.WaitGroup
+        - g errgroup.Group
+        - k string

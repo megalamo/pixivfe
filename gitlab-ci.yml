@@ -1,0 +1,765 @@
+# # Skip commands:
+#
+# - `[skip ci]`: Prevents the entire pipeline from running.
+# - `[skip build]`: Skips the jobs for building and publishing binaries.
+# - `[skip docs]`: Skips the jobs for building and publishing documentation.
+# - `[rebuild builder]`: Forces a rebuild of the `builder` OCI image.
+# - `[rebuild docs-builder]`: Forces a rebuild of the `docs-builder` OCI image.
+# - `[rebuild wrangler-builder]`: Forces a rebuild of the `wrangler-builder` OCI image.
+# - `[rebuild CI images]`: Forces a rebuild of all CI OCI images.
+#
+# For more information, see the README.
+
+.docs-paths: &docs-paths
+  - .gitlab-ci.yml
+  - docs/**/*
+  - mkdocs.yml
+  - Pipfile
+  - Pipfile.lock
+
+.build-and-publish-rules: &build-and-publish-rules
+  - if: $CI_COMMIT_MESSAGE =~ /\[skip build\]/
+    when: never
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_COMMIT_TAG
+
+.docs-rules: &docs-rules
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE !~ /\[skip docs\]/
+    changes: *docs-paths
+  - if: $CI_PIPELINE_SOURCE == "web"
+    when: always
+  - when: never
+
+stages:
+  - prepare
+  - code-analysis
+  - build
+  - publish
+  - documentation
+  - maintenance
+
+variables:
+  GIT_STRATEGY: fetch
+  GIT_DEPTH: 1
+
+  # Output upload and download progress every 2 seconds.
+  TRANSFER_METER_FREQUENCY: "2s"
+  ARTIFACT_COMPRESSION_LEVEL: "fastest"
+  CACHE_COMPRESSION_LEVEL: "fastest"
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /\[skip ci\]/
+      when: never
+    - when: always
+
+include:
+  # ref: https://docs.gitlab.com/user/application_security/sast/
+  - template: Security/SAST.gitlab-ci.yml
+
+# prepare stage
+# .build-base-image is a template for building OCI images.
+.build-base-image:
+  stage: prepare
+  image: quay.io/buildah/stable:v1.40.1-immutable
+  variables:
+    # DOCKERFILE and IMAGE_SUFFIX must be defined in the extending job.
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/$IMAGE_SUFFIX:latest
+    CACHE_IMAGE: $CI_REGISTRY_IMAGE/$IMAGE_SUFFIX-cache
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - |
+      echo "Building and pushing image to $BUILD_IMAGE from $DOCKERFILE"
+      echo "Using cache image: $CACHE_IMAGE"
+    - |
+      buildah build \
+        --jobs 0 \
+        --layers \
+        --tag $BUILD_IMAGE \
+        -f $DOCKERFILE \
+        --cache-from "$CACHE_IMAGE" \
+        --cache-to "$CACHE_IMAGE" \
+        .
+    - buildah push $BUILD_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - $DOCKERFILE
+    - if: $CI_COMMIT_MESSAGE =~ /\[rebuild $IMAGE_SUFFIX\]/
+    - if: $CI_COMMIT_MESSAGE =~ /\[rebuild CI images\]/
+
+# build-builder-image builds an OCI image with application build dependencies pre-installed.
+build-builder-image:
+  extends: .build-base-image
+  variables:
+    IMAGE_SUFFIX: builder
+    DOCKERFILE: build/Dockerfile.builder
+
+# build-publisher-image builds an OCI image with container publishing dependencies pre-installed.
+build-publisher-image:
+  extends: .build-base-image
+  variables:
+    IMAGE_SUFFIX: publisher
+    DOCKERFILE: build/Dockerfile.publisher
+
+# build-docs-image builds an OCI image with documentation dependencies pre-installed.
+build-docs-image:
+  extends: .build-base-image
+  variables:
+    IMAGE_SUFFIX: docs-builder
+    DOCKERFILE: build/Dockerfile.docs
+
+# build-wrangler-image builds an OCI image with Wrangler pre-installed.
+build-wrangler-image:
+  extends: .build-base-image
+  variables:
+    IMAGE_SUFFIX: wrangler-builder
+    DOCKERFILE: build/Dockerfile.wrangler
+
+# code-analysis stage
+# sast runs a Static Application Security Testing (SAST) scan.
+sast:
+  stage: code-analysis
+  needs: []
+  variables:
+    SAST_EXCLUDED_PATHS: "assets, docs"
+    SAST_SEMGREP_METRICS: false
+
+# To override a job definition, we need to declare a job
+# with the same name as the SAST job to override.
+# ref: https://docs.gitlab.com/user/application_security/sast/#overriding-sast-jobs
+semgrep-sast:
+  dependencies: []
+  needs: []
+  rules:
+    # Only run on tagged commits.
+    - if: $CI_COMMIT_TAG
+    - when: never
+
+# build stage
+# build-binaries cross-compiles application binaries.
+build-binaries:
+  stage: build
+  image: $CI_REGISTRY_IMAGE/builder:latest
+  dependencies: []
+  needs:
+    - job: build-builder-image
+      optional: true
+  parallel:
+    matrix:
+      - GOOS: linux
+        GOARCH: amd64
+      - GOOS: linux
+        GOARCH: arm64
+      - GOOS: freebsd
+        GOARCH: amd64
+      - GOOS: openbsd
+        GOARCH: amd64
+      - GOOS: windows
+        GOARCH: amd64
+      - GOOS: darwin
+        GOARCH: arm64
+  variables:
+    # Set GOPATH to a cacheable directory. GitLab CI can only cache paths inside the project directory.
+    # ref: https://docs.gitlab.com/ci/caching/#how-cache-is-different-from-artifacts
+    GOPATH: $CI_PROJECT_DIR/.go
+    # Tell Go to store its build cache inside the project directory.
+    GOCACHE: "$CI_PROJECT_DIR/.cache/go-build"
+  cache:
+    # Create a new cache only when dependencies change.
+    key:
+      files:
+        - go.mod
+        - go.sum
+      prefix: go-build-${CI_COMMIT_REF_SLUG}-${GOOS}-${GOARCH}
+    paths:
+      # Path for downloaded Go modules.
+      - .go/pkg/mod/
+      # Path for the Go build cache.
+      - .cache/go-build/
+    policy: pull-push
+  before_script:
+    - mkdir -p .go .cache/go-build
+  script:
+    - |
+      echo "Downloading Go modules..."
+      go mod download
+
+      echo "Building binary for $GOOS/$GOARCH..."
+      # Set the output filename
+      OUTPUT_NAME="pixivfe-${GOOS}-${GOARCH}"
+      if [ "$GOOS" = "windows" ]; then
+        OUTPUT_NAME="${OUTPUT_NAME}.exe"
+      fi
+
+      echo "Building for $GOOS/$GOARCH -> $OUTPUT_NAME"
+      CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -v -trimpath -buildvcs=true -o $OUTPUT_NAME .
+  artifacts:
+    paths:
+      - pixivfe-*
+    expire_in: 1 day
+  rules: *build-and-publish-rules
+
+# publish-image publishes a multi-arch OCI image and attaches a signed SBOM.
+publish-image:
+  stage: publish
+  image: $CI_REGISTRY_IMAGE/publisher:latest
+  variables:
+    # Add --yes flag to cosign to run non-interactively.
+    # ref: https://docs.gitlab.com/user/packages/container_registry/cosign_tutorial/#define-cicd-variables
+    COSIGN_YES: "true"
+  # Add id_tokens for keyless signing.
+  # ref: https://docs.gitlab.com/user/packages/container_registry/cosign_tutorial/#prepare-oidc-token
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  needs:
+    - job: build-binaries
+      artifacts: true
+    - job: build-publisher-image
+      optional: true
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - |
+      set -euo pipefail
+      shopt -s nullglob
+
+      # Handler for fatal errors.
+      die() {
+        printf "ERROR: %s\n" "$1" >&2
+        exit 1
+      }
+
+      main() {
+        # Stage binaries for build context
+        echo "Staging binaries for multi-arch build context..."
+        local staged_count=0
+        for file in ./pixivfe-linux-*; do
+          if [[ $file =~ pixivfe-linux-(.+)$ ]]; then
+            local arch="${BASH_REMATCH[1]}"
+            mkdir -p "linux/${arch}"
+            mv "$file" "linux/${arch}/pixivfe"
+            echo "  - Staged binary for linux/${arch}"
+            ((++staged_count))
+          else
+            echo "WARNING: Skipping unexpected file format: $file"
+          fi
+        done
+
+        if (( staged_count == 0 )); then
+          die "No 'pixivfe-linux-*' binaries found to build the image."
+        fi
+
+        # Define publication targets
+        local -a push_tags
+        local verify_ref
+
+        if [[ -n "${CI_COMMIT_TAG-}" ]]; then
+          # On a git tag, publish "latest" and the specific tag version.
+          push_tags=("$CI_COMMIT_TAG" "latest")
+          verify_ref="refs/tags/$CI_COMMIT_TAG"
+          echo "Publication target: Git tag '${CI_COMMIT_TAG}'"
+        else
+          # On the default branch, publish to the "next" tag.
+          push_tags=("next")
+          verify_ref="refs/heads/$CI_DEFAULT_BRANCH"
+          echo "Publication target: Default branch ('${CI_DEFAULT_BRANCH}')"
+        fi
+        echo "Image will be pushed to tags: ${push_tags[*]}"
+
+        # Clean pre-existing images
+        echo "Cleaning up pre-existing images..."
+        for tag in "${push_tags[@]}"; do
+          echo "  - Removing existing image (if any): ${CI_REGISTRY_IMAGE}:${tag}"
+          skopeo delete --tls-verify=true "docker://${CI_REGISTRY_IMAGE}:${tag}" || true
+        done
+
+        # Build and push image
+        local manifest_name="pixivfe-manifest-$CI_PIPELINE_ID"
+
+        echo "Building image with manifest: $manifest_name"
+        buildah build \
+          --jobs 0 \
+          --layers \
+          --manifest "$manifest_name" \
+          --platform linux/amd64,linux/arm64 \
+          -f build/Dockerfile.package \
+          .
+
+        echo "Pushing manifest to all target tags..."
+        for tag in "${push_tags[@]}"; do
+          echo "  - Pushing to ${CI_REGISTRY_IMAGE}:${tag}"
+          buildah manifest push \
+            --all \
+            --compression-format zstd:chunked \
+            --compression-level 17 \
+            --digestfile image.digest \
+            "$manifest_name" \
+            "docker://${CI_REGISTRY_IMAGE}:${tag}"
+        done
+
+        # Sign and attest image
+        echo
+        echo "Starting image verification and signing"
+
+        local image_digest
+        image_digest=$(cat image.digest)
+        local image_uri_with_digest="${CI_REGISTRY_IMAGE}@${image_digest}"
+        local verify_identity="${CI_PROJECT_URL}//.gitlab-ci.yml@${verify_ref}"
+        local verify_issuer="${CI_SERVER_URL}"
+        export COSIGN_EXPERIMENTAL=1
+
+        echo "Image to sign:   ${image_uri_with_digest}"
+        echo "Signer identity: ${verify_identity}"
+        echo "Signer issuer:   ${verify_issuer}"
+
+        echo "Logging into registry with cosign..."
+        echo "$CI_REGISTRY_PASSWORD" | cosign login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY" >/dev/null
+
+        # Generate, attach, and verify the SBOM attestation
+        echo "Generating and attesting SBOM..."
+        syft scan --quiet --enrich golang --output spdx-json=sbom.json "$image_uri_with_digest"
+        cosign attest --predicate sbom.json --replace --type "spdxjson" "$image_uri_with_digest" >/dev/null
+        echo "Verifying SBOM attestation..."
+        cosign verify-attestation \
+          --certificate-identity "${verify_identity}" \
+          --certificate-oidc-issuer "${verify_issuer}" \
+          --type "spdxjson" \
+          "${image_uri_with_digest}" >/dev/null
+
+        # Sign and verify the image
+        echo "Signing image..."
+        cosign sign "$image_uri_with_digest" >/dev/null
+        echo "Verifying image signature..."
+        cosign verify \
+          --certificate-identity "${verify_identity}" \
+          --certificate-oidc-issuer "${verify_issuer}" \
+          "${image_uri_with_digest}" >/dev/null
+
+        echo "Image signing and attestation completed successfully."
+      }
+
+      main
+  rules: *build-and-publish-rules
+
+# upload-packages generates SBOMs, attests them, and uploads the binaries
+# and their attestations to our generic packages repository.
+# ref: https://docs.gitlab.com/user/packages/generic_packages/
+upload-packages:
+  stage: publish
+  image: $CI_REGISTRY_IMAGE/builder:latest
+  variables:
+    GIT_STRATEGY: none
+    COSIGN_YES: "true"
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  needs:
+    - job: build-binaries
+      artifacts: true
+    - job: build-builder-image
+      optional: true
+  script:
+    - |
+      set -euo pipefail
+      shopt -s nullglob
+
+      # Handler for fatal errors.
+      die() {
+        printf "ERROR: %s\n" "$1" >&2
+        exit 1
+      }
+
+      # Helper for authenticated GitLab API calls.
+      glab_api() {
+        glab api --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$@" ||
+          die "GitLab API call failed for args: [$*]"
+      }
+
+      # Finds the ID of a generic package in the GitLab Package Registry.
+      #
+      # @param $1  string  The name of the package (e.g., "pixivfe").
+      # @param $2  string  The version of the package (e.g., "1.2.3").
+      #
+      # @stdout The package ID if found, or an empty string if not found.
+      # @return 0 on success (found or not found), 1 on an unexpected error.
+      find_package_id() {
+        if [[ -z "$1" || -z "$2" ]]; then
+          echo "Usage: find_package_id <package_name> <version>" >&2
+          return 1
+        fi
+
+        local package_name="$1"
+        local version="$2"
+        local api_url="${GITLAB_API_V4_URL:-https://gitlab.com/api/v4}"
+
+        local response http_code curl_exit_code body
+
+        # Capture the response body and HTTP code in a single command.
+        # The GitLab API is queried for a generic package matching the name and version.
+        response=$(
+          curl --silent --show-error --fail \
+            --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+            -G \
+            --data-urlencode "package_name=${package_name}" \
+            --data-urlencode "package_type=generic" \
+            --data-urlencode "package_version=${version}" \
+            --write-out '\n%{http_code}' \
+            "${api_url}/projects/${CI_PROJECT_ID}/packages"
+        )
+        curl_exit_code=$?
+
+        http_code="${response##*$'\n'}"
+        body="${response%$'\n'*}"
+
+        if (( curl_exit_code == 0 )); then
+          # Success (HTTP 200-299). The API found something or returned an empty list.
+          jq -r '.[0].id // ""' <<< "$body"
+          return 0
+        elif (( curl_exit_code == 22 )); then
+          # An HTTP error (4xx-5xx) occurred.
+          if [[ "$http_code" -eq 404 ]]; then
+            # A 404 is an expected "not found" result, not a script error.
+            # We output nothing and return success, per the function's contract.
+            return 0
+          else
+            # Any other API error (401, 403, 500) is unexpected.
+            echo "Error: Unexpected API response for package '$package_name' v$version." >&2
+            echo "Status: $http_code" >&2
+            echo "Response: $body" >&2
+            return 1
+          fi
+        else
+          # A non-HTTP curl error occurred (e.g., network, DNS).
+          # The 'body' variable now contains curl's error message from --show-error.
+          echo "Error: curl command failed with exit code ${curl_exit_code}." >&2
+          echo "Details: ${body}" >&2
+          return 1
+        fi
+      }
+
+      # Deletes a single package file if it exists.
+      delete_package_file() {
+        local package_id=$1
+        local filename=$2
+        local file_id=$3
+
+        echo "  - Deleting duplicate file ${filename} (ID: ${file_id})."
+        glab_api "projects/${CI_PROJECT_ID}/packages/${package_id}/package_files/${file_id}" --method DELETE
+      }
+
+      # Uploads a single artifact file to a specific package version.
+      upload_artifact() {
+        local version=$1
+        local file_path=$2
+        local filename
+        filename=$(basename -- "$file_path")
+
+        echo "  - Uploading ${filename} to version ${version}..."
+        glab_api "projects/${CI_PROJECT_ID}/packages/generic/pixivfe/${version}/${filename}" \
+          --method PUT \
+          --input "${file_path}"
+      }
+
+      main() {
+        local package_name="pixivfe"
+
+        # Discover binaries and exit early if none are found.
+        echo "Discovering binaries to process..."
+        local -a binaries
+        # Find executable files OR files ending in .exe to handle all platforms.
+        mapfile -t binaries < <(find . -maxdepth 1 -type f \( -name 'pixivfe-*' -a -executable \) -o -name 'pixivfe-*.exe')
+
+        if (( ${#binaries[@]} == 0 )); then
+          echo "No binaries found to process. Exiting."
+          exit 0
+        fi
+        echo "Found ${#binaries[@]} binaries."
+
+        # Process each binary: generate artifacts and create a compressed archive.
+        echo "Preparing archives..."
+        local -a archives_to_upload=()
+        for binary in "${binaries[@]}"; do
+          local filename base_name sbom_file bundle_file archive_name
+          filename=$(basename -- "$binary")
+
+          # Determine the base name for artifacts (strip .exe if present).
+          if [[ "$filename" == *.exe ]]; then
+            base_name="${filename%.exe}"
+          else
+            base_name="$filename"
+          fi
+
+          sbom_file="${base_name}.spdx.json"
+          bundle_file="${base_name}.bundle"
+
+          echo "Processing ${filename}..."
+          echo "  - Generating SBOM -> ${sbom_file}"
+          syft scan --quiet --enrich golang --output "spdx-json=${sbom_file}" "$binary"
+
+          echo "  - Creating signed attestation -> ${bundle_file}"
+          cosign attest-blob --bundle "${bundle_file}" --predicate "${sbom_file}" --type spdxjson "$binary" >/dev/null
+
+          # Create the appropriate archive based on the platform (Windows or not).
+          if [[ "$filename" == *.exe ]]; then
+            archive_name="${base_name}.zip"
+            echo "  - Creating ZIP archive (minimal compression) -> ${archive_name}"
+            # Use -1 for fastest compression, -q for quiet.
+            zip -1 -q "${archive_name}" "$binary" "$sbom_file" "$bundle_file"
+          else
+            archive_name="${base_name}.tar.xz"
+            echo "  - Creating tar.xz archive -> ${archive_name}"
+            # Use XZ_OPTS=-0 for fastest compression.
+            XZ_OPTS=-0 tar -cJf "${archive_name}" "$binary" "$sbom_file" "$bundle_file"
+          fi
+
+          archives_to_upload+=("$archive_name")
+
+          # Clean up intermediate artifact files now that they are in the archive.
+          rm "$sbom_file" "$bundle_file"
+        done
+        echo "Finished preparing archives."
+
+        # Define target versions for publication.
+        local -a versions
+        if [[ -n "${CI_COMMIT_TAG-}" ]]; then
+          versions=("$CI_COMMIT_TAG" "latest")
+          echo "Publishing to versions: $CI_COMMIT_TAG, latest"
+        else
+          versions=("next")
+          echo "Publishing to version: next"
+        fi
+
+        # Upload the created archives to each version.
+        for version in "${versions[@]}"; do
+          echo "Starting publication for version: ${version}"
+
+          # Check if the package version already exists to handle updates.
+          local package_id
+          package_id=$(find_package_id "$package_name" "$version")
+
+          # Build a map of existing remote files for quick duplicate checks.
+          declare -A existing_files=()
+          if [[ -n "$package_id" ]]; then
+            echo "Found existing package with ID: ${package_id}. Checking for file duplicates."
+            local files_json
+            files_json=$(glab_api --paginate "projects/${CI_PROJECT_ID}/packages/${package_id}/package_files")
+            while IFS='=' read -r name id; do
+              [[ -n "$name" ]] && existing_files["$name"]=$id
+            done < <(echo "$files_json" | jq -r '.[] | .file_name + "=" + (.id|tostring)')
+          else
+            echo "No existing package found for version ${version}. Proceeding with new upload."
+          fi
+
+          # Upload all archives, deleting remote duplicates first.
+          for file_path in "${archives_to_upload[@]}"; do
+            local archive_filename
+            archive_filename=$(basename -- "$file_path")
+
+            if [[ -v existing_files["$archive_filename"] ]]; then
+              delete_package_file "$package_id" "$archive_filename" "${existing_files[$archive_filename]}"
+            fi
+
+            upload_artifact "$version" "$file_path"
+          done
+        done
+      }
+
+      main
+  rules: *build-and-publish-rules
+
+# documentation stage
+# documentation-build builds the documentation.
+documentation-build:
+  stage: documentation
+  image: $CI_REGISTRY_IMAGE/docs-builder:latest
+  dependencies: []
+  needs:
+    - job: build-docs-image
+      optional: true
+  variables:
+    # Fetching the full history is required for git-revision-date-localized-plugin.
+    # ref: https://pypi.org/project/mkdocs-git-revision-date-localized-plugin/
+    GIT_DEPTH: 0
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    # Tell pipenv to create the virtualenv in the project directory so it can be cached.
+    PIPENV_VENV_IN_PROJECT: "1"
+  cache:
+    key:
+      files:
+        - Pipfile.lock
+    paths:
+      # Cache for downloaded packages.
+      - .cache/pip/
+      # Cache for the virtualenv itself.
+      - .venv/
+  before_script:
+    # Using sync since we don't need the extra validation from install --deploy.
+    - pipenv sync
+  script:
+    # Run mkdocs from within the virtualenv.
+    - pipenv run mkdocs build
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 day
+  rules: *docs-rules
+
+# documentation-publish publishes the documentation to Cloudflare Pages.
+#
+# The following environment variables are required:
+# - CLOUDFLARE_ACCOUNT_ID
+# - CLOUDFLARE_API_TOKEN
+# - CF_ZONE_ID
+documentation-publish:
+  stage: documentation
+  image: $CI_REGISTRY_IMAGE/wrangler-builder:latest
+  variables:
+    GIT_STRATEGY: none
+  needs:
+    - job: documentation-build
+      artifacts: true
+    - job: build-wrangler-image
+      optional: true
+  script:
+    - wrangler pages deploy public/ --project-name=pixivfe-docs
+  rules: *docs-rules
+
+# maintenance stage
+# orphaned-artifacts-cleanup removes orphaned attestation and signature artifacts
+# that no longer have corresponding image manifests in the registry.
+#
+# NOTE: This script operates only on the main repository (registry.gitlab.com/pixivfe/pixivfe),
+# not on sub-repositories like docs-builder, wrangler-builder, etc.
+#
+# ref(glab): https://gitlab.com/gitlab-org/cli/-/blob/main/docs/source/api/index.md
+# ref(oras): https://oras.land/docs/category/oras-commands
+orphaned-artifacts-cleanup:
+  stage: maintenance
+  image: $CI_REGISTRY_IMAGE/builder:latest
+  variables:
+    GIT_STRATEGY: none
+  needs:
+    - job: build-builder-image
+      optional: true
+    - job: publish-image
+      optional: true
+  script:
+    - |
+      set -euo pipefail
+
+      # Handler for fatal errors. Writes to stderr.
+      die() {
+        printf "ERROR: %s\n" "$1" >&2
+        exit 1
+      }
+
+      # Handler for non-fatal warnings. Writes to stderr.
+      warn() {
+        printf "WARNING: %s\n" "$1" >&2
+      }
+
+      # Helper for authenticated GitLab API calls.
+      glab_api() {
+        local output
+        output=$(glab api --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$@") ||
+          die "GitLab API call failed for args: [$*]."
+
+        if [[ -n "$output" ]]; then
+          echo "$output"
+        fi
+      }
+
+      main() {
+        local repo_id artifact_tags_json
+        local deleted_count=0 failed_count=0
+        local tag digest encoded_tag
+
+        echo "Starting orphaned artifacts cleanup"
+
+        echo "Logging into GitLab container registry: $CI_REGISTRY"
+        oras login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY" <<<"$CI_JOB_TOKEN" || die "Failed to login to registry"
+
+        # Find the main repository ID by filtering on exact path match
+        # This ensures we only operate on "pixivfe/pixivfe", not sub-repositories
+        echo "Finding repository ID for path: $CI_PROJECT_PATH"
+
+        # Normalize to lowercase since registry paths are lowercased
+        project_path_lower=$(echo "$CI_PROJECT_PATH" | tr '[:upper:]' '[:lower:]')
+
+        # Safely pass the shell variable into the query using jq's --arg.
+        repo_id=$(
+          glab_api "/projects/${CI_PROJECT_ID}/registry/repositories" |
+            jq --arg path "$project_path_lower" -r '.[] | select(.path == $path) | .id'
+        )
+
+        if [[ -z $repo_id ]]; then
+          echo "No container repository found for this project. Nothing to do."
+          exit 0
+        fi
+        echo "Found repository ID: $repo_id"
+
+        # Fetch all tags from the selected repository
+        echo "Fetching all repository tags..."
+        artifact_tags_json=$(glab_api --paginate "/projects/${CI_PROJECT_ID}/registry/repositories/${repo_id}/tags")
+
+        echo "Examining artifact tags ending in .att or .sig..."
+        # Use process substitution <(...) to ensure the while loop runs in the current shell,
+        # allowing `deleted_count` and `failed_count` to be modified.
+        while IFS= read -r tag; do
+          echo "Processing tag: $tag"
+
+          # Extract hash from tag name (format: sha256-[hash].att or sha256-[hash].sig)
+          if [[ $tag =~ ^sha256-([a-f0-9]+)\.(att|sig)$ ]]; then
+            digest="sha256:${BASH_REMATCH[1]}"
+
+            # Check if the manifest exists in the same repository (CI_REGISTRY_IMAGE scope)
+            # We only care about the exit code, so redirect all output to /dev/null.
+            if oras manifest fetch "${CI_REGISTRY_IMAGE}@${digest}" &>/dev/null; then
+              echo "  - Referenced manifest '$digest' exists. Keeping tag."
+            else
+              echo "  - ORPHANED: Referenced manifest '$digest' not found. Deleting tag."
+
+              # URL-encode the tag name using jq's @uri to handle special characters (e.g., '/') safely.
+              encoded_tag=$(printf '%s' "$tag" | jq -sRr @uri)
+
+              # Delete tag from the same repository we're cleaning
+              if glab_api --method DELETE "/projects/${CI_PROJECT_ID}/registry/repositories/${repo_id}/tags/${encoded_tag}"; then
+                echo "  - Successfully deleted: $tag"
+                ((++deleted_count))
+              else
+                warn "Failed to delete '$tag'"
+                ((++failed_count))
+              fi
+
+              # Briefly pause to avoid hitting rate limits.
+              sleep 0.2
+            fi
+          else
+            echo "  - Skipping tag with unexpected format: $tag"
+            continue
+          fi
+        done < <(echo "$artifact_tags_json" | jq -r '.[].name | select(endswith(".att") or endswith(".sig"))')
+
+        if ((deleted_count == 0 && failed_count == 0)); then
+          echo "No orphaned artifact tags were found."
+        fi
+
+        echo "Cleanup summary:"
+        echo "Tags deleted: $deleted_count"
+        echo "Failures:     $failed_count"
+
+        if ((failed_count > 0)); then
+          die "Cleanup finished with $failed_count failures."
+        fi
+      }
+
+      main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Trigger cleanup after successful image publishing to handle any remaining orphaned artifacts
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - when: manual
