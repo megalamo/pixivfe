@@ -8,11 +8,11 @@ import (
 	"runtime/trace"
 	"time"
 
-	"codeberg.org/pixivfe/pixivfe/v3/config"
-	"codeberg.org/pixivfe/pixivfe/v3/server/assets"
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware"
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware/limiter"
-	"codeberg.org/pixivfe/pixivfe/v3/server/routes"
+	"github.com/megalamo/pixivfe/configs"
+	"github.com/megalamo/pixivfe/server/assets"
+	"github.com/megalamo/pixivfe/server/middleware"
+	"github.com/megalamo/pixivfe/server/middleware/limiter"
+	"github.com/megalamo/pixivfe/server/routes"
 )
 
 // DefineRoutes sets up all the routes for the application using our custom Router.
