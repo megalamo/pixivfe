@@ -11,11 +11,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"codeberg.org/pixivfe/pixivfe/v3/assets/views"
-	"codeberg.org/pixivfe/pixivfe/v3/config"
-	"codeberg.org/pixivfe/pixivfe/v3/core/audit"
-	"codeberg.org/pixivfe/pixivfe/v3/server/request_context"
-	"codeberg.org/pixivfe/pixivfe/v3/server/routes"
+	"github.com/megalamo/pixivfe/assets/views"
+	"github.com/megalamo/pixivfe/config"
+	"github.com/megalamo/pixivfe/core/audit"
+	"github.com/megalamo/pixivfe/server/request_context"
+	"github.com/megalamo/pixivfe/server/routes"
 )
 
 // CatchError wraps HTTP handlers that return an error, providing centralized error handling,
