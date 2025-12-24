@@ -1,0 +1,67 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+// NovelDiscoveryData holds data specific to the novel discovery page.
+type NovelDiscoveryData struct {
+	Title  string
+	Novels []*core.NovelBrief
+}
+
+templ NovelDiscovery(pageData NovelDiscoveryData) {
+	{{ cd := CommonData(ctx) }}
+	{{ activeMode := utils.GetMapParam(cd.Queries, "mode", "safe") }}
+	@layout.Default(pageData.Title, false) {
+		// Prefetch links
+		<link rel="prefetch" href="/discovery/novel?mode=r18"/>
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "Explore",
+				Title:   "Discover novels",
+			})
+			@fragments.Separator("-mt-4")
+			// Category and mode
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: "",
+					Entries: []fragments.TabGroupEntry{
+						{Path: "/discovery", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+						{Path: "/discovery/novel", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+						{Path: "/discovery/users", Name: "Users", Icon: `<span class="material-symbols-rounded-20">person</span>`},
+					},
+					ActiveState: cd.CurrentPath},
+				)
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "mode"),
+					Entries: []fragments.TabGroupEntry{
+						{Path: "all", Name: "All", Icon: `<span class="material-symbols-rounded-20">public</span>`},
+						{Path: "safe", Name: "Safe", Icon: `<span class="material-symbols-rounded-20">shield</span>`},
+						{Path: "r18", Name: "R-18", Icon: `<span class="material-symbols-rounded-20">warning</span>`},
+					},
+					ActiveState: activeMode,
+					BaseShade:   "900"},
+				)
+			</div>
+			// Main content
+			<div id="content" class="htmx-added-fade-in">
+				@fragments.NovelGrid(fragments.NovelGridProps{Novels: pageData.Novels})
+				@fragments.Separator("mt-12 mb-4")
+				@fragments.InfiniteScrollTrigger()
+			</div>
+			<noscript>
+				<form method="post">
+					<button type="submit" class="filled-button font-medium gap-2 mx-auto">
+						<span class="material-symbols-rounded-20">refresh</span>
+						Refresh
+					</button>
+				</form>
+			</noscript>
+		</div>
+	}
+}

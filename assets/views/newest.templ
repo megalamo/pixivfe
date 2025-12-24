@@ -1,0 +1,64 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+templ Newest(pageData core.NewestData) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(pageData.Title, false) {
+		{{
+			activeCategory := utils.GetMapParam(cd.Queries, "category", core.NewestDefaultCategory)
+			activeR18 := utils.GetMapParam(cd.Queries, "r18", core.NewestDefaultR18)
+			title := ""
+
+			switch {
+			case activeCategory == "" || activeCategory == core.NewestDefaultCategory:
+				title = "Newest artworks"
+			case activeCategory == "manga":
+				title = "Newest manga"
+			case activeCategory == "novel":
+				title = "Newest novels"
+			}
+		}}
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow:     "Explore",
+				Title:       title,
+				Description: "View the latest works posted to pixiv.",
+			})
+			@fragments.Separator("-mt-4")
+			// Category and mode
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "category"),
+					Entries: []fragments.TabGroupEntry{
+						{Path: "illust", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+						{Path: "manga", Name: "Manga", Icon: `<span class="material-symbols-rounded-20">manga</span>`},
+						{Path: "novel", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+					},
+					ActiveState: activeCategory})
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "r18"),
+					Entries: []fragments.TabGroupEntry{
+						{Path: "false", Name: "Safe", Icon: `<span class="material-symbols-rounded-20">shield</span>`},
+						{Path: "true", Name: "R-18", Icon: `<span class="material-symbols-rounded-20">warning</span>`},
+					},
+					ActiveState: activeR18,
+					BaseShade:   "900"})
+			</div>
+			// Content display
+			if cd.Queries["category"] == "novel" {
+				@fragments.NovelGrid(fragments.NovelGridProps{Novels: pageData.Novels})
+			} else {
+				<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+					@fragments.ArtworkGrid(pageData.IllustManga)
+				</div>
+			}
+		</div>
+	}
+}

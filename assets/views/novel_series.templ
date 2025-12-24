@@ -1,0 +1,127 @@
+package views
+
+import (
+	"math"
+	"strconv"
+
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ NovelSeriesPage(pageData core.NovelSeriesData) {
+	@layout.Default(pageData.NovelSeries.Title+" | "+pageData.NovelSeries.UserName, false) {
+		{{ relativeTimeData_UpdateDate := template.RelativeTime(pageData.NovelSeries.UpdateDate) }}
+		<link rel="prefetch" href={ templ.URL("/users/" + pageData.NovelSeries.UserID + "?category=novels") }/>
+		<div class="flex items-center flex-col w-full max-w-7xl gap-8">
+			<div class="flex flex-col lg:flex-row w-full max-w-5xl gap-6">
+				// Series cover image
+				<img
+					src={ pageData.NovelSeries.Cover.Urls.Four80Mw }
+					class="rounded size-auto max-w-full max-h-128 object-contain !bg-neutral-950"
+				/>
+				// Author and "Read first episode" button
+				<div class="flex flex-col gap-8">
+					<div class="flex items-center font-medium text-neutral-400 -mb-6">Novel series</div>
+					<div class="text-3xl font-bold">{ pageData.NovelSeries.Title }</div>
+					<div class="flex flex-wrap items-center justify-between -mt-4 gap-6">
+						@fragments.AvatarUser(pageData.User, "filled")
+						// <a href={ templ.URL("/novel/" + pageData.NovelSeries.FirstNovelID) } class="filled-button font-medium gap-2">
+						// 	<span class="material-symbols-rounded-20">book_5</span>
+						// 	Read first episode
+						// </a>
+					</div>
+					// Detailed info box
+					<div class="flex flex-col h-fit rounded-lg w-full border border-neutral-700 gap-6 p-5">
+						// Metadata: series length, update date, character count, reading time
+						<div class="flex flex-wrap text-sm text-neutral-400 gap-5">
+							// Episode count
+							<div class="flex items-center gap-1.5" title={ "Series of " + strconv.Itoa(pageData.NovelSeries.Total) + " works" }>
+								<span class="material-symbols-rounded-20">collections_bookmark</span>
+								<div><span class="font-semibold text-neutral-200">{ strconv.Itoa(pageData.NovelSeries.Total) }</span> <span class="text-neutral-200">episode(s)</span></div>
+							</div>
+							// Update date
+							<div class="flex flex-nowrap items-center gap-1.5" title={ template.NaturalTime(pageData.NovelSeries.UpdateDate) }>
+								<span class="material-symbols-rounded-20">history</span>
+								<div>
+									<span class="font-semibold text-neutral-200">{ relativeTimeData_UpdateDate.Value }</span>
+									<span class="text-neutral-200">{ relativeTimeData_UpdateDate.Description }</span>
+									if relativeTimeData_UpdateDate.Time != "" {
+										<span class="font-semibold text-neutral-200">{ relativeTimeData_UpdateDate.Time }</span>
+									}
+								</div>
+							</div>
+							// Character count
+							<div class="flex items-center gap-1.5">
+								<span class="material-symbols-rounded-20">subject</span>
+								<div><span class="font-semibold text-neutral-200">{ template.PrettyNumber(pageData.NovelSeries.PublishedTotalCharacterCount) }</span> <span class="text-neutral-200">char(s)</span></div>
+							</div>
+							// Reading time
+							<div class="flex flex-nowrap items-center gap-1.5">
+								<span class="material-symbols-rounded-20">schedule</span>
+								<div><span class="font-semibold text-neutral-200">{ template.PrettyNumber(int(math.Floor(float64(pageData.NovelSeries.PublishedReadingTime)/60))) }</span> <span class="text-neutral-200">min read</span></div>
+							</div>
+						</div>
+						// Description
+						if pageData.NovelSeries.Caption != "" {
+							if len(pageData.NovelSeries.Caption) <= 1000 {
+								<div class="description text-wrap break-words text-neutral-300 text-base/6">
+									@templ.Raw(pageData.NovelSeries.Caption)
+								</div>
+							} else {
+								<details class="group/details text-base/6">
+									<summary class="group/summary flex w-fit font-medium text-blue-400 hover:text-blue-300 cursor-pointer select-none">
+										<span class="inline group-open/details:hidden">
+											Read description <span class="text-sm font-normal text-neutral-400 group-hover/summary:text-neutral-300">({ template.PrettyNumber(len(pageData.NovelSeries.Caption)) } characters)</span>
+										</span>
+										<span class="hidden group-open/details:inline">
+											Hide description
+										</span>
+									</summary>
+									<div class="description text-wrap wrap-anywhere text-neutral-300 group-open/details:opacity-100 opacity-0 transition mt-2">
+										@templ.Raw(pageData.NovelSeries.Caption)
+									</div>
+								</details>
+							}
+						} else {
+							<p class="text-neutral-400 text-base/7 italic">
+								No description added
+							</p>
+						}
+						{{
+							// Check if we have any badges or tags to display
+							hasBadges := pageData.NovelSeries.AIType == 2 ||
+								pageData.NovelSeries.XRestrict != 0 ||
+								pageData.NovelSeries.IsOriginal ||
+								(pageData.NovelSeries.GenreID != "0" && pageData.NovelSeries.GenreID != "")
+							showBadgesAndTags := hasBadges || len(pageData.NovelSeries.Tags) > 0
+						}}
+						if showBadgesAndTags {
+							<hr class="border-neutral-800"/>
+						}
+						// Badges and tags
+						if showBadgesAndTags {
+							@fragments.Tags(pageData.NovelSeries.Tags, fragments.TagsConfig{
+								AIType:     int(pageData.NovelSeries.AIType),
+								XRestrict:  int(pageData.NovelSeries.XRestrict),
+								IsOriginal: pageData.NovelSeries.IsOriginal,
+								GenreID:    pageData.NovelSeries.GenreID,
+							})
+						}
+					</div>
+				</div>
+			</div>
+			<hr class="border-neutral-800 my-6"/>
+			<div id="checkpoint" class="flex flex-col gap-6 scroll-mt-20">
+				@fragments.NovelGrid(fragments.NovelGridProps{Novels: pageData.NovelSeriesContents, InSeriesList: true})
+				@fragments.Pagination(fragments.PaginationProps{
+					BaseURL:     "/novel/series/" + pageData.NovelSeries.ID + "?p=",
+					EndingURL:   "#checkpoint",
+					CurrentPage: pageData.CurrentPage,
+					MaxPage:     pageData.MaxPage,
+				})
+			</div>
+		</div>
+	}
+}
