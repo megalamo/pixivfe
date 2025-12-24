@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware"
-	"codeberg.org/pixivfe/pixivfe/v3/server/request_context"
+	"github.com/megalamo/pixivfe/server/middleware"
+	"github.com/megalamo/pixivfe/server/request_context"
 )
 
 // TestWithRequestContext_AttachesContext tests that request context is properly attached.
