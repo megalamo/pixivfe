@@ -1,0 +1,321 @@
+// Copyright 2023 - 2025, VnPower and the PixivFE contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package devviews
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"fmt"
+)
+
+templ Components() {
+	@layout.Default("Components", false) {
+		<div class="w-full max-w-3xl text-sm/6 text-neutral-300">
+			<div class="text-neutral-100 tracking-tight text-3xl font-bold">/dev/components</div>
+			<div class="mt-2">Welcome to the hidden components catalog</div>
+			<div class="mt-2">Design principles for components:</div>
+			<ul class="list-disc list-inside">
+				<li>use timed transitions diligently to keep interactions snappy</li>
+				<li>corners should be minimally rounded</li>
+				<li>actions on a page should be clear via visual weight</li>
+			</ul>
+			@fragments.Separator("my-4")
+			<section>
+				<div class="text-neutral-100 tracking-tight text-xl font-bold mb-2">Buttons</div>
+				<div class="text-sm text-neutral-300 mb-4">Only use primary variants when it truly represents the main action; use a secondary variant in most cases</div>
+				@heading("Medium")
+				@componentWrapper() {
+					<div class="flex items-center gap-2 mb-4">
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Primary",
+							Variant: fragments.ButtonVariantPrimary,
+							Size:    fragments.ButtonSizeMd,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Secondary",
+							Variant: fragments.ButtonVariantSecondary,
+							Size:    fragments.ButtonSizeMd,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Tertiary",
+							Variant: fragments.ButtonVariantTertiary,
+							Size:    fragments.ButtonSizeMd,
+						})
+					</div>
+					// Disabled variants
+					<div class="flex items-center gap-2">
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Primary",
+							Variant:    fragments.ButtonVariantPrimary,
+							Size:       fragments.ButtonSizeMd,
+							IsDisabled: true,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Secondary",
+							Variant:    fragments.ButtonVariantSecondary,
+							Size:       fragments.ButtonSizeMd,
+							IsDisabled: true,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Tertiary",
+							Variant:    fragments.ButtonVariantTertiary,
+							Size:       fragments.ButtonSizeMd,
+							IsDisabled: true,
+						})
+					</div>
+				}
+				@heading("Small")
+				<div class="text-xs text-neutral-300 mt-1">You can also use these as text badges (make sure that they are interactive, or part of an interactive element in this case)</div>
+				@componentWrapper() {
+					<div class="flex items-center gap-2 mb-3">
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Primary",
+							Variant: fragments.ButtonVariantPrimary,
+							Size:    fragments.ButtonSizeSm,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Secondary",
+							Variant: fragments.ButtonVariantSecondary,
+							Size:    fragments.ButtonSizeSm,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:    fragments.ButtonIcon{Name: "code"},
+							Label:   "Tertiary",
+							Variant: fragments.ButtonVariantTertiary,
+							Size:    fragments.ButtonSizeSm,
+						})
+					</div>
+					// Disabled variants
+					<div class="flex items-center gap-2">
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Primary",
+							Variant:    fragments.ButtonVariantPrimary,
+							Size:       fragments.ButtonSizeSm,
+							IsDisabled: true,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Secondary",
+							Variant:    fragments.ButtonVariantSecondary,
+							Size:       fragments.ButtonSizeSm,
+							IsDisabled: true,
+						})
+						@fragments.Button(fragments.ButtonProps{
+							Icon:       fragments.ButtonIcon{Name: "code"},
+							Label:      "Tertiary",
+							Variant:    fragments.ButtonVariantTertiary,
+							Size:       fragments.ButtonSizeSm,
+							IsDisabled: true,
+						})
+					</div>
+				}
+			</section>
+			@fragments.Separator("my-4")
+			<section>
+				<div class="text-neutral-100 tracking-tight text-xl font-bold mb-2">Selectable image grid</div>
+				<div class="text-sm text-neutral-300 mb-4">A component for selecting one or more images from a set.</div>
+				@componentWrapper() {
+					@fragments.SelectableImageGrid(fragments.SelectableImageGridProps{
+						IDPrefix:     "images_download",
+						InputName:    "images",
+						SelectedText: i18n.Tr(ctx, "Selected"),
+						Items: []fragments.SelectableImageGridItem{
+							{ImageURL: "https://pximg.perennialte.ch/img-original/img/2024/05/24/18/33/24/119007909_p0.png"},
+							{ImageURL: "https://pximg.perennialte.ch/img-original/img/2024/05/24/18/33/24/119007909_p1.png"},
+							{ImageURL: "https://pximg.perennialte.ch/img-original/img/2024/05/24/18/33/24/119007909_p2.png"},
+							{ImageURL: "https://pximg.perennialte.ch/img-original/img/2024/05/24/18/33/24/119007909_p3.png"},
+						},
+						DefaultChecked: true,
+					})
+					@fragments.Button(fragments.ButtonProps{
+						Icon:         fragments.ButtonIcon{Name: "download"},
+						Label:        "Download selected images",
+						Variant:      fragments.ButtonVariantPrimary,
+						Size:         fragments.ButtonSizeMd,
+						Attrs:        templ.Attributes{"type": "submit"},
+						ExtraClasses: "mt-4",
+					})
+				}
+			</section>
+			@fragments.Separator("my-4")
+			<section>
+				<div class="text-neutral-100 tracking-tight text-xl font-bold mb-2">Radio groups</div>
+				<div class="text-sm text-neutral-300 mb-4">See <a href="https://tailwindcss.com/plus/ui-blocks/application-ui/forms/radio-groups" class="blue-link">https://tailwindcss.com/plus/ui-blocks/application-ui/forms/radio-groups</a></div>
+				@heading("Simple list")
+				@componentWrapper() {
+					// Component start
+					<fieldset class="text-neutral-100 text-sm">
+						<legend>
+							@fragments.ContentHeading(fragments.ContentHeadingProps{
+								Title:     i18n.Tr(ctx, "Notifications"),
+								TitleSize: "md",
+							})
+						</legend>
+						<p class="text-neutral-300 mt-2">How do you prefer to receive notifications?</p>
+						<div class="flex flex-col gap-6 mt-4">
+							for i := range 3 {
+								{{ id := fmt.Sprintf("radio_group_simple_list_%d", i) }}
+								<div class="flex items-center gap-2">
+									@radio(radioProps{
+										id:    id,
+										name:  "radio_group_simple_list",
+										value: "placeholder_value",
+									})
+									@radioLabel(radioLabelProps{
+										forAttr: id,
+										content: "Push notification",
+									})
+								</div>
+							}
+						</div>
+					</fieldset>
+					// Component end
+				}
+				@heading("Simple inline list")
+				@componentWrapper() {
+					// Component start
+					<fieldset class="text-neutral-100 text-sm">
+						<legend>
+							@fragments.ContentHeading(fragments.ContentHeadingProps{
+								Title:     i18n.Tr(ctx, "Notifications"),
+								TitleSize: "md",
+							})
+						</legend>
+						<p class="text-neutral-300 mt-2">How do you prefer to receive notifications?</p>
+						<div class="flex gap-6 mt-4">
+							for i := range 3 {
+								{{ id := fmt.Sprintf("radio_group_simple_inline_list_%d", i) }}
+								<div class="flex items-center gap-2">
+									@radio(radioProps{
+										id:    id,
+										name:  "radio_group_simple_inline_list",
+										value: "placeholder_value",
+									})
+									@radioLabel(radioLabelProps{
+										forAttr: id,
+										content: "Push notification",
+									})
+								</div>
+							}
+						</div>
+					</fieldset>
+					// Component end
+				}
+				@heading("List with description")
+				@componentWrapper() {
+					// Component start
+					<fieldset class="text-neutral-100 text-sm">
+						<legend>
+							@fragments.ContentHeading(fragments.ContentHeadingProps{
+								Title:     i18n.Tr(ctx, "Notifications"),
+								TitleSize: "md",
+							})
+						</legend>
+						<p class="text-neutral-300 mt-2">How do you prefer to receive notifications?</p>
+						<div class="flex flex-col gap-6 mt-4">
+							for i := range 3 {
+								{{ id := fmt.Sprintf("radio_group_list_with_description_%d", i) }}
+								<div>
+									<div class="flex items-center gap-2">
+										@radio(radioProps{
+											id:    id,
+											name:  "radio_group_list_with_description",
+											value: "placeholder_value",
+										})
+										@radioLabel(radioLabelProps{
+											forAttr: id,
+											content: "Push notification",
+										})
+									</div>
+									<p class="text-neutral-300 text-xs mt-2 ms-6">4 GB RAM / 2 CPUS / 80 GB SSD Storage</p>
+								</div>
+							}
+						</div>
+					</fieldset>
+					// Component end
+				}
+				@heading("Cards")
+				@componentWrapper() {
+					// Component start
+					<fieldset class="text-neutral-100 text-sm">
+						<div class="flex flex-wrap gap-4 mt-2">
+							for i := range 3 {
+								<label for={ fmt.Sprintf("radio_group_cards_%d", i) } class="text-sm cursor-pointer flex gap-3 items-start rounded border bg-neutral-800 border-neutral-600 has-checked:bg-neutral-700 has-checked:border-white hover:border-neutral-500 p-4">
+									@radio(radioProps{
+										id:    fmt.Sprintf("radio_group_cards_%d", i),
+										name:  "radio_group_cards",
+										value: "placeholder_value",
+									})
+									<div>
+										<div class="text-neutral-100 font-medium leading-4">{ fmt.Sprintf("Input %d", i+1) }</div>
+										<div class="mt-2 text-neutral-300">{ fmt.Sprintf("Optional helper text for input %d. More text.", i+1) }</div>
+									</div>
+								</label>
+							}
+						</div>
+					</fieldset>
+					// Component end
+				}
+			</section>
+		</div>
+	}
+}
+
+type radioProps struct {
+	id      string // value for `id` attribute
+	name    string // value for `name` attribute
+	value   string // value for `value` attribute
+	checked bool   // checked boolean
+}
+
+// Internal helper for "Radio groups"
+// TODO: disabled styling
+templ radio(props radioProps) {
+	<input
+		id={ props.id }
+		type="radio"
+		name={ props.name }
+		value={ props.value }
+		checked?={ props.checked }
+		class="peer relative size-4 appearance-none rounded-full border border-neutral-600 bg-neutral-800 before:absolute before:inset-1 before:rounded-full before:bg-black not-checked:before:hidden checked:border-white checked:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white forced-colors:appearance-auto forced-colors:before:hidden"
+	/>
+}
+
+type radioLabelProps struct {
+	forAttr string // value for `for` attribute
+	content string // content
+}
+
+templ radioLabel(props radioLabelProps) {
+	<label for={ props.forAttr } class="font-medium text-neutral-100 leading-4">{ props.content }</label>
+}
+
+templ componentWrapper() {
+	<div class="border border-neutral-700 rounded p-4 mt-3 mb-6">
+		{ children... }
+	</div>
+}
+
+templ heading(content string) {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     content,
+		TitleSize: "md",
+	})
+}
+
+templ section() {
+	<section class="not-first:mt-6">
+		{ children... }
+	</section>
+}
