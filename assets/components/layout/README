@@ -1,0 +1,11 @@
+This directory contains components that define the overall structure and common UI elements for pages. These include the main page layout, navigation bar, footer, sidebars, and menus.
+
+## Usage
+
+To use these components, import them using the path:
+
+```go
+import "codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+```
+
+The `Default` component is used as the root component for rendering a full HTML page. Other components like `navbar`, `footer`, etc., are only called from within the `Default` component.

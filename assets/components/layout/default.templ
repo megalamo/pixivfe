@@ -1,0 +1,550 @@
+package layout
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/partials"
+	"codeberg.org/pixivfe/pixivfe/v3/config"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ Default(title string, minimal bool) {
+	{{
+		cd := fragments.CommonData(ctx)
+
+		if title != "" {
+			title = title + " - PixivFE"
+		} else {
+			title = "PixivFE"
+		}
+		desktopSidebarHidden := cd.CookieList[cookie.DesktopSidebarHiddenCookie] == "true"
+	}}
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<meta name="description" content="Read this on PixivFE"/>
+			<meta property="og:title" content={ title }/>
+			<meta property="og:site_name" content="PixivFE"/>
+			<meta property="og:type" content="article"/>
+			<meta property="og:url" content={ cd.CurrentPath }/>
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="htmx-config" content='{"defaultSettleDelay":0}'/>
+			// We already have a dark mode, so no need for Dark Reader.
+			// We can disable it by embedding a "Dark Reader lock" below.
+			//
+			// ref: https://github.com/darkreader/darkreader/blob/c47fa55/CONTRIBUTING.md?plain=1#L19-L26
+			<meta name="darkreader-lock"/>
+			<link rel="icon" href="/img/favicon.png" type="image/png" sizes="96x96"/>
+			<link rel="icon" href="/img/favicon.svg" type="image/svg+xml"/>
+			<link rel="stylesheet" href="/css/tailwind-style.css"/>
+			<link rel="manifest" href="/manifest.json"/>
+			// Load unminified JS in development
+			if config.Global.Development.InDevelopment {
+				<script src="/js/htmx@2.0.4.js" defer></script>
+			} else {
+				<script src="/js/htmx@2.0.4.min.js" defer></script>
+			}
+			<script src="/js/response-targets@2.0.3.min.js" defer></script>
+			<script type="module" src="/js/all.js"></script>
+			if cd.CookieList[cookie.OpenAllButtonCookie] == "true" {
+				<script type="module" src="/js/OpenAllButton.js"></script>
+			}
+			<noscript>
+				<style>.requires-js { display: none !important; }</style>
+			</noscript>
+		</head>
+		<body
+			class="group/body
+            bg-neutral-900 text-neutral-100 fill-neutral-100
+            touch-manipulation subpixel-antialiased font-sans scheme-only-dark
+            has-[#image-expand:checked]:overflow-hidden
+            has-[div:popover-open]:overflow-hidden
+            has-[div:popover-open]:not-[div:popover-open]:pointer-events-none
+            [.htmx-swapping]:opacity-0
+            [.htmx-swapping]:duration-100
+            starting:opacity-0
+            opacity-100
+            transition
+            duration-300
+            selection:bg-white selection:text-black"
+			hx-boost="true"
+			hx-target="body"
+			hx-swap="innerHTML swap:100ms"
+			hx-ext="response-targets"
+		>
+			<div
+				hx-preserve
+				id="loading-indicator"
+				class="requires-js fixed top-0 left-0 z-100 isolate h-1 w-full rounded-full bg-linear-to-r from-[-20%] from-white to-white to-120%"
+			></div>
+			if !minimal {
+				// Modal popover background
+				<div
+					class="fixed left-0 top-0 -z-1 w-full h-full
+                transition-all transition-discrete duration-300
+                hidden
+                bg-black/0
+                group-has-[.modal-popover:popover-open]/body:block
+                group-has-[.modal-popover:popover-open]/body:starting:bg-black/0
+                group-has-[.modal-popover:popover-open]/body:bg-black/60
+                group-has-[.modal-popover:popover-open]/body:z-20"
+				></div>
+				@navbar()
+				// Main content wrapper
+				<div class="xl:flex xl:justify-center">
+					// State and configuration for the sidebar toggle.
+					// Targeted and replaced by htmx.
+					@fragments.ComponentReturn(fragments.ComponentReturnProps{
+						Inputs: []fragments.ComponentReturnInput{
+							// Activates the component return flow on the server.
+							{Name: "return_component", Value: "true", Type: "hidden"},
+							// Specifies the server-driven action to perform.
+							{Name: "component_return_action", Value: "toggle_cookie", Type: "hidden"},
+							// Provides the name of the cookie to be toggled.
+							{Name: "key", Value: string(cookie.DesktopSidebarHiddenCookie), Type: "hidden"},
+							// The actual stateful value that gets toggled.
+							{
+								Name:  string(cookie.DesktopSidebarHiddenCookie),
+								Value: map[bool]string{true: "true", false: "false"}[desktopSidebarHidden],
+								Type:  "hidden",
+							},
+						},
+					})
+					// Checkbox to interactively control the desktop sidebar.
+					// - hx-post: Points to a generic endpoint. Actual logic is determined by the inputs above.
+					// - hx-include: Includes all inputs from the preceding state component.
+					// - hx-target: Replaces the state component with the server's response.
+					<input
+						id="desktop_sidebar_hidden"
+						type="checkbox"
+						class="peer hidden"
+						checked?={ desktopSidebarHidden }
+						hx-post="/settings/set_cookie"
+						hx-trigger="change"
+						hx-target="previous .component-return-data"
+						hx-swap="outerHTML"
+						hx-include="previous .component-return-data"
+						data-no-loading-indicator
+					/>
+					// Mobile sidebar (popover)
+					<div
+						tabindex="-1"
+						popover
+						id="mobile_sidebar"
+						class="modal-popover fixed inset-0 z-30 h-full w-8/12 max-w-76 flex-col overflow-y-auto bg-neutral-900 opacity-0 transition-all transition-discrete duration-200 open:pointer-events-auto open:translate-x-0 open:opacity-100 open:flex starting:open:-translate-x-full starting:open:opacity-0 xl:hidden pointer-events-none -translate-x-full"
+					>
+						@sidebarContent()
+					</div>
+					// Desktop sidebar (inline, sticky) - This is now a sibling of the 'peer' checkbox.
+					<div class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-e border-neutral-700 bg-neutral-900 transition-all transition-discrete duration-200 peer-checked:border-e-transparent peer-checked:grid-cols-[0fr] xl:grid grid-cols-[1fr]">
+						@sidebarContent()
+					</div>
+					// Wrapper for page content and footer.
+					<div class="flex min-h-[calc(100vh-3.5rem)] flex-col xl:grow">
+						// Wrapper for actual page content.
+						<main class="relative flex flex-grow flex-col items-center px-4 py-8">
+							{ children... }
+						</main>
+						@footer()
+					</div>
+				</div>
+				@userMenu()
+			} else {
+				<main class="grid min-h-screen place-items-center p-4">
+					{ children... }
+				</main>
+			}
+		</body>
+	</html>
+}
+
+templ navbar() {
+	{{
+		cd := fragments.CommonData(ctx)
+		logoStyle := cd.CookieList[cookie.LogoStyleCookie]
+		username := cd.CookieList[cookie.UsernameCookie]
+		userID := cd.CookieList[cookie.UserIDCookie]
+		userAvatar := cd.CookieList[cookie.UserAvatarCookie]
+	}}
+	<nav class="sticky top-0 flex items-center justify-between gap-4 h-14 px-4 mx-auto bg-neutral-900 border-b border-neutral-700 z-10">
+		<div class="flex items-center gap-3">
+			<button
+				popovertarget="mobile_sidebar"
+				class="flex xl:hidden items-center justify-center size-8 hover:bg-neutral-700 active:scale-95 transition rounded cursor-pointer text-neutral-300 hover:text-neutral-100"
+			>
+				<span class="material-symbols-rounded-24">
+					menu
+				</span>
+			</button>
+			<label
+				for="desktop_sidebar_hidden"
+				class="hidden xl:flex items-center justify-center size-8 hover:bg-neutral-700 active:scale-95 transition rounded cursor-pointer text-neutral-300 hover:text-neutral-100"
+			>
+				<span class="material-symbols-rounded-24">
+					menu
+				</span>
+			</label>
+			if logoStyle == "alternative" {
+				<a href="/" class="size-8">
+					<img src="/img/logo-alt.gif" alt="PixivFE icon" class="size-full"/>
+				</a>
+			} else {
+				<a href="/" class="flex items-center gap-2 hover:bg-neutral-700 transition rounded px-2 py-1">
+					// icon is hidden on sm and smaller since we need space for the search bar
+					<img class="hidden md:block size-5" src="/img/favicon.svg"/>
+					<div class="text-xl font-medium">PixivFE</div>
+					// if template.IsFirstPathPart(cd.CurrentPath, "/pixivision") {
+					//  <div class="badge-secondary">pixivision</div>
+					// }
+				</a>
+			}
+		</div>
+		@search()
+		// TODO: Tapping this on mobile should simply make the search bar appear full width in the nav.
+		// Use a CSS/<input type="checkbox"> hack for this.
+		// <a
+		//  href="/search"
+		//  class="flex items-center justify-center size-8 hover:bg-neutral-700 active:scale-95 transition rounded cursor-pointer text-neutral-300 hover:text-neutral-100 p-1"
+		// >
+		//  <span class="material-symbols-rounded-24">
+		//      search
+		//  </span>
+		// </a>
+		if username != "" && userID != "" && userAvatar != "" {
+			<button
+				popovertarget="user-menu"
+				class="shrink-0 justify-end flex fill-neutral-400 hover:fill-neutral-300 cursor-pointer transition"
+			>
+				<img
+					src={ userAvatar }
+					alt={ username + "'s avatar" }
+					class="w-8 rounded-full avatar-outline-glow"
+				/>
+			</button>
+		} else {
+			<a
+				href={ templ.URL("/self/login?noAuthReturnPath=" + cd.CurrentPath + "&loginReturnPath=" + cd.CurrentPath) }
+				class="shrink-0 justify-end outlined-button text-sm font-medium gap-2"
+			>
+				<div class="material-symbols-rounded-20">account_circle</div>
+				<div>Sign in</div>
+			</a>
+		}
+	</nav>
+}
+
+// `text-base md:text-sm` is needed otherwise mobile Safari will auto-zoom the <input type="search" /> on focus
+// due to the font-size of the text being <16px.
+// Looks hideous, but it is what it is.
+// ref: https://stackoverflow.com/questions/2989263/disable-auto-zoom-in-input-text-tag-safari-on-iphone
+templ search() {
+	{{ cd := fragments.CommonData(ctx) }}
+	<form
+		id="navbar_search"
+		action="/search"
+		method="get"
+		class="isolate text-base md:text-sm w-full max-w-md flex items-center md:absolute left-1/2 top-1/2 md:-translate-x-1/2 md:-translate-y-1/2"
+	>
+		<select
+			id="navbar_search_category"
+			required
+			name="category"
+			class="hidden sm:block w-fit border border-neutral-700 text-neutral-100 hover:bg-neutral-800 cursor-pointer rounded-md px-3 py-2 me-2"
+			data-no-loading-indicator
+		>
+			<option
+				value={ core.SearchArtworksCategory }
+				selected?={ cd.Queries["category"] == "" || cd.Queries["category"] == core.SearchArtworksCategory }
+			>
+				{ i18n.Tr(ctx, "All") }
+			</option>
+			<option
+				value={ core.SearchIllustrationsCategory }
+				selected?={ cd.Queries["category"] == core.SearchIllustrationsCategory }
+			>
+				{ i18n.Tr(ctx, "Illustrations") }
+			</option>
+			<option
+				value={ core.SearchMangaCategory }
+				selected?={ cd.Queries["category"] == core.SearchMangaCategory }
+			>
+				{ i18n.Tr(ctx, "Manga") }
+			</option>
+			<option
+				value={ core.SearchUgoiraCategory }
+				selected?={ cd.Queries["category"] == core.SearchUgoiraCategory }
+			>
+				{ i18n.Tr(ctx, "Ugoira") }
+			</option>
+			<option
+				value={ core.SearchNovelsCategory }
+				selected?={ cd.Queries["category"] == core.SearchNovelsCategory }
+			>
+				{ i18n.Tr(ctx, "Novels") }
+			</option>
+			<option
+				value={ core.SearchUsersCategory }
+				selected?={ cd.Queries["category"] == core.SearchUsersCategory }
+			>
+				{ i18n.Tr(ctx, "Users") }
+			</option>
+		</select>
+		<input
+			id="navbar_search_input"
+			type="search"
+			name="name"
+			role="combobox"
+			aria-autocomplete="list"
+			aria-controls="navbar_search_listbox"
+			aria-expanded="false"
+			aria-label={ i18n.Tr(ctx, "Search") }
+			aria-keyshortcuts="Alt+Shift+1 Alt+Shift+2 Alt+Shift+3 Alt+Shift+4 Alt+Shift+5 Alt+Shift+6 Alt+Shift+7 Alt+Shift+8 Alt+Shift+9"
+			spellcheck="false"
+			autocomplete="off"
+			required
+			class="border-e-0 text-neutral-300 placeholder:text-neutral-500 focus:placeholder:text-neutral-400 bg-neutral-900 focus:bg-neutral-800 hover:bg-neutral-800 border border-neutral-700 rounded-md rounded-e-none w-full md:max-w-xs px-3 py-2 z-10"
+			placeholder={ i18n.Tr(ctx, "Search pixiv") }
+			value={ cd.Queries["name"] }
+		/>
+		<button
+			type="submit"
+			aria-label={ i18n.Tr(ctx, "Search") }
+			class="shrink-0 flex items-center justify-center px-3 py-2 rounded-md rounded-s-none bg-neutral-800 hover:bg-neutral-700 transition-none cursor-pointer border border-neutral-700 hover:border-neutral-500"
+		>
+			<span class="material-symbols-rounded-24 md:!hidden">search</span>
+			<span class="hidden md:inline">{ i18n.Tr(ctx, "Search") }</span>
+		</button>
+	</form>
+	// Polite live region to announce suggestion counts and guidance to screen reader users.
+	<div id="navbar_search_status" role="status" aria-live="polite" class="sr-only"></div>
+	<input id="navbar_search_version" type="hidden" name="v" value="14"/>
+	@partials.TagCompletionsNoContent(nil)
+}
+
+templ footer() {
+	<footer class="bg-neutral-900 border-t border-neutral-700 px-4 py-8">
+		<div class="mx-auto max-w-7xl flex flex-col gap-8 sm:flex-row sm:justify-between sm:items-end">
+			<div class="flex flex-col gap-2">
+				<a href="/" class="animated-underline text-2xl font-medium">PixivFE</a>
+				<p class="text-xs text-neutral-400">
+					An open-source alternative frontend for pixiv that doesn't suck.
+				</p>
+				<p class="text-xs font-medium text-neutral-400">
+					Not developed, created, or distributed by pixiv.
+				</p>
+			</div>
+			<a href="https://htmx.org/" rel="noopener">
+				<img
+					class="w-48"
+					src="/img/createdwith.jpeg"
+					width="680"
+					height="168"
+					loading="lazy"
+				/>
+			</a>
+		</div>
+	</footer>
+}
+
+// sidebarLink is a link item in the sidebar.
+templ sidebarLink(href templ.SafeURL, text string, icon templ.Component) {
+	<li>
+		<a
+			href={ href }
+			class="flex items-center gap-2 rounded-lg p-2 -mx-2 text-neutral-300 fill-neutral-300 transition hover:bg-neutral-700 hover:text-neutral-50 hover:fill-neutral-50"
+		>
+			@icon
+			{ text }
+		</a>
+	</li>
+}
+
+// sidebarHeading is a section heading in the sidebar.
+templ sidebarHeading(text string) {
+	<li class="mb-1 mt-4 text-sm font-medium text-neutral-400">{ text }</li>
+}
+
+templ sidebarContent() {
+	{{
+		cd := fragments.CommonData(ctx)
+
+		items := []templ.Component{
+			sidebarLink(
+				templ.URL("/discovery"),
+				"Discovery",
+				templ.Raw(`<span class="material-symbols-rounded-20">explore</span>`),
+			),
+			sidebarLink(
+				templ.URL("/ranking"),
+				"Rankings",
+				templ.Raw(`<span class="material-symbols-rounded-20">leaderboard</span>`),
+			),
+			sidebarLink(
+				templ.URL("/self/followingWorks?noAuthReturnPath="+cd.CurrentPath+"&loginReturnPath=/self/followingWorks"),
+				"Latest by followed users",
+				templ.Raw(`<span class="material-symbols-rounded-20">article_person</span>`),
+			),
+
+			sidebarHeading("Explore"),
+			sidebarLink(
+				templ.URL("/rankingCalendar"),
+				"Ranking calendar",
+				templ.Raw(`<span class="material-symbols-rounded-20">calendar_month</span>`),
+			),
+			sidebarLink(
+				templ.URL("/newest"),
+				"Newest",
+				templ.Raw(template.RenderIcon("star-20", "bi bi-stars shrink-0")),
+			),
+			sidebarLink(
+				templ.URL("/pixivision"),
+				"pixivision",
+				templ.Raw(`<span class="material-symbols-rounded-20">palette</span>`),
+			),
+
+			sidebarHeading("You"),
+			sidebarLink(
+				templ.URL("/self?noAuthReturnPath="+cd.CurrentPath),
+				"Profile",
+				templ.Raw(`<span class="material-symbols-rounded-20">account_circle</span>`),
+			),
+			sidebarLink(
+				templ.URL("/self/bookmarks?noAuthReturnPath="+cd.CurrentPath),
+				"Bookmarks",
+				templ.Raw(`<span class="material-symbols-rounded-20">favorite</span>`),
+			),
+			sidebarLink(
+				templ.URL("/self/followingUsers?noAuthReturnPath="+cd.CurrentPath),
+				"Followed users",
+				templ.Raw(`<span class="material-symbols-rounded-20">group</span>`),
+			),
+			sidebarLink(
+				templ.URL("/settings"),
+				"Settings",
+				templ.Raw(`<span class="material-symbols-rounded-fill-20">settings</span>`),
+			),
+
+			sidebarHeading("Info"),
+			sidebarLink(
+				templ.URL("/about"),
+				"About",
+				templ.Raw(`<span class="material-symbols-rounded-20">info</span>`),
+			),
+			sidebarLink(
+				templ.URL(config.Global.Instance.RepoURL),
+				"Source code",
+				templ.Raw(`<span class="material-symbols-rounded-20">code</span>`),
+			),
+		}
+	}}
+	// Content wrapper
+	// text-nowrap and overflow-x-hidden are needed for grid-template-columns transitions to look correct.
+	<div class="flex h-full min-w-0 flex-col overflow-x-hidden text-nowrap">
+		// Header, hidden at xl breakpoint.
+		<div class="sticky inset-0 z-4 flex flex-shrink-0 items-center justify-between gap-24 border-b border-neutral-700 bg-neutral-900 py-3 px-4 xl:hidden">
+			<a href="/" class="flex w-fit text-xl font-medium animated-underline">PixivFE</a>
+			<button
+				popovertarget="mobile_sidebar"
+				class="-me-1 flex size-8 cursor-pointer items-center justify-center rounded-full p-1 text-neutral-300 transition hover:bg-neutral-700 hover:text-neutral-100 active:scale-95 xl:hidden"
+			>
+				<span class="material-symbols-rounded-24">close</span>
+			</button>
+		</div>
+		// Navigation items: render the pre-built components.
+		<ul class="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden py-3 ps-4 pe-8">
+			for _, c := range items {
+				@c
+			}
+		</ul>
+		// Footer area with build info / revision.
+		<div class="flex shrink-0 flex-col gap-1 border-t border-neutral-700 bg-neutral-900 px-4 py-3 text-neutral-400 sm:p-4">
+			<div class="text-xs text-neutral-400">Revision</div>
+			<a
+				href={ templ.URL(config.Global.Instance.RepoURL + "/commit/" + config.Global.Build.VcsRevision) }
+				class="contents"
+			>
+				<div class="text-sm font-medium text-link text-neutral-300 hover:text-neutral-200">
+					{ config.Global.Build.Revision() }
+				</div>
+			</a>
+		</div>
+	</div>
+}
+
+templ userMenu() {
+	{{
+		cd := fragments.CommonData(ctx)
+
+		username := cd.CookieList[cookie.UsernameCookie]
+		userID := cd.CookieList[cookie.UserIDCookie]
+		userAvatar := cd.CookieList[cookie.UserAvatarCookie]
+	}}
+	<div
+		tabindex="-1"
+		popover
+		id="user-menu"
+		class="peer pointer-events-none open:pointer-events-auto
+        opacity-0 starting:open:opacity-0 open:opacity-100 scale-95 starting:open:scale-95 open:scale-100 origin-top-right transition-all transition-discrete
+        w-64 max-w-11/12 fixed inset-auto top-14 right-4 z-30 bg-transparent"
+	>
+		<div class="flex flex-col gap-1 bg-neutral-900 border border-neutral-700 text-neutral-300 fill-neutral-300 rounded-lg drop-shadow-lg text-sm p-3">
+			// <div class="text-neutral-400 text-xs px-3">You are logged in as:</div>
+			<a href="/self" class="contents">
+				<div class="flex items-center text-neutral-100 hover:bg-neutral-800 rounded-md transition gap-4 px-3 py-2">
+					<img src={ userAvatar } alt={ username + "'s avatar" } class="size-10 shrink-0 rounded-full"/>
+					<div>
+						<div class="text-lg font-medium line-clamp-1">{ username }</div>
+						<div class="text-xs text-neutral-400">
+							ID: { userID }
+						</div>
+					</div>
+				</div>
+			</a>
+			@fragments.Separator("my-2")
+			<a
+				href="/self/bookmarks"
+				class="flex items-center hover:text-neutral-50 hover:fill-neutral-50 hover:bg-neutral-800 rounded-md transition gap-2 px-3 py-2"
+			>
+				<span class="material-symbols-rounded-20">favorite</span>
+				Bookmarks
+			</a>
+			<a
+				href="/self/followingUsers"
+				class="flex items-center hover:text-neutral-50 hover:fill-neutral-50 hover:bg-neutral-800 rounded-md transition gap-2 px-3 py-2"
+			>
+				<span class="material-symbols-rounded-20">group</span>
+				Following
+			</a>
+			<a
+				href="/self/followingWorks"
+				class="flex items-center hover:text-neutral-50 hover:fill-neutral-50 hover:bg-neutral-800 rounded-md transition gap-2 px-3 py-2"
+			>
+				<span class="material-symbols-rounded-20">article_person</span>
+				Latest from following
+			</a>
+			<a
+				href="/settings"
+				class="flex items-center hover:text-neutral-50 hover:fill-neutral-50 hover:bg-neutral-800 rounded-md transition gap-2 px-3 py-2"
+			>
+				// NOTE: actually a fill icon version
+				<span class="material-symbols-rounded-fill-20">settings</span>
+				Settings
+			</a>
+			@fragments.Separator("my-2")
+			<form action="/settings/logout" method="post" class="contents">
+				<button
+					type="submit"
+					class="flex items-center cursor-pointer hover:bg-red-500/10 rounded-md text-red-300 fill-red-300 transition gap-2 px-3 py-2"
+				>
+					<span class="material-symbols-rounded-20">logout</span>
+					Log out
+				</button>
+			</form>
+		</div>
+	</div>
+}
