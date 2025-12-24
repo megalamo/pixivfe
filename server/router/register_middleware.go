@@ -1,10 +1,10 @@
 package router
 
 import (
-	"codeberg.org/pixivfe/pixivfe/v3/config"
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware"
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware/limiter"
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware/set_request_context"
+	"github.com/megalamo/pixivfe/config"
+	"github.com/megalamo/pixivfe/server/middleware"
+	"github.com/megalamo/pixivfe/server/middleware/limiter"
+	"github.com/megalamo/pixivfe/server/middleware/set_request_context"
 )
 
 func (router *Router) RegisterMiddleware() {
