@@ -10,7 +10,7 @@ package router
 import (
 	"net/http"
 
-	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+	"github.com/megalamo/pixivfe/server/utils"
 )
 
 // redirectWithQueryParam is a helper function to redirect requests to
