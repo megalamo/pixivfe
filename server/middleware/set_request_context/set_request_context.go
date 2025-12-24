@@ -6,8 +6,8 @@ package set_request_context
 import (
 	"net/http"
 
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware/limiter"
-	"codeberg.org/pixivfe/pixivfe/v3/server/request_context"
+	"github.com/megalamo/pixivfe/server/middleware/limiter"
+	"github.com/megalamo/pixivfe/server/request_context"
 )
 
 // WithRequestContext is a middleware that attaches a RequestContext to each HTTP request.
