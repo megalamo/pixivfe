@@ -11,9 +11,9 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 
-	"codeberg.org/pixivfe/pixivfe/v3/core"
-	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
-	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"github.com/megalamo/pixivfe/core"
+	"github.com/megalamo/pixivfe/core/cookie"
+	"github.com/megalamo/pixivfe/server/template"
 )
 
 // LikeData represents the data required to like a work.
