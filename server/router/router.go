@@ -6,7 +6,7 @@ package router
 import (
 	"net/http"
 
-	"codeberg.org/pixivfe/pixivfe/v3/server/middleware"
+	"github.com/megalamo/pixivfe/server/middleware"
 )
 
 // Router wraps http.ServeMux and provides middleware chaining functionality.
