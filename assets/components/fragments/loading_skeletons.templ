@@ -1,0 +1,11 @@
+package fragments
+
+// ArtworkLoadingSkeleton renders a skeleton placeholder
+// with the specified number of elements for a loading state.
+templ ArtworkLoadingSkeleton(count int) {
+	<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-pulse">
+		for range count {
+			<div class="aspect-square bg-neutral-800 rounded"></div>
+		}
+	</div>
+}

@@ -1,0 +1,83 @@
+package fragments
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"net/url"
+)
+
+// TagsConfig defines the configuration for the Tags component.
+type TagsConfig struct {
+	AIType         int    // AI type for badge display
+	XRestrict      int    // X-restrict level
+	IsOriginal     bool   // Whether content is original (for novels only)
+	GenreID        string // Novel genre ID (for novels only)
+	HrefExt        string // Custom extension to append to href attribute
+	WrapperClasses string
+}
+
+// Tags renders a tags component with various configuration options.
+templ Tags(tags core.Tags, config TagsConfig) {
+	{{
+		var restrictTagToShow string
+		if config.XRestrict == 1 {
+			restrictTagToShow = "R-18"
+		} else if config.XRestrict == 2 {
+			restrictTagToShow = "R-18G"
+		} else {
+			// If XRestrict is 0, check if tags themselves indicate R-18 or R-18G.
+			// These are considered mutually exclusive for the main badge.
+			// Prioritize R-18 if both are somehow present in tags and XRestrict is 0.
+			r18PresentInTags := false
+			r18gPresentInTags := false
+			for _, tag := range tags {
+				if tag.Name == "R-18" {
+					r18PresentInTags = true
+				}
+				// Check independently, as R-18 and R-18G could be separate tag objects in the list
+				if tag.Name == "R-18G" {
+					r18gPresentInTags = true
+				}
+			}
+
+			if r18PresentInTags {
+				restrictTagToShow = "R-18"
+			} else if r18gPresentInTags { // Only applies if R-18 tag is not present
+				restrictTagToShow = "R-18G"
+			}
+		}
+	}}
+	<div class={ templ.Classes("flex flex-wrap items-baseline gap-2", config.WrapperClasses) }>
+		// AI-generated badge always comes first
+		if config.AIType == 2 {
+			<span class="badge-warning">AI-generated</span>
+		}
+		// R-18/R-18G badge (determined above)
+		if restrictTagToShow != "" {
+			<span class="badge-danger">{ restrictTagToShow }</span>
+		}
+		// Novel-specific badges
+		if config.IsOriginal {
+			<span class="badge-primary">Original</span>
+		}
+		if config.GenreID != "0" && config.GenreID != "" {
+			<span class="badge-secondary">{ core.NovelGenre(ctx, config.GenreID) }</span>
+		}
+		// Regular tags
+		for _, tag := range tags {
+			// Filter out any "R-18" and "R-18G" tags as we've already handled them above.
+			if !core.ParseXRestrict(tag.Name).IsNSFWRating() {
+				<div class="flex flex-wrap items-baseline gap-x-1">
+					<a
+						href={ templ.URL("/search?name=" + url.QueryEscape(tag.Name) + config.HrefExt) }
+						class="hover:visited:text-purple-300 visited:text-purple-400 hover:text-blue-300 text-blue-400 font-medium"
+					>
+						#{ tag.Name }
+					</a>
+					if tag.TagTranslations.En != "" {
+						<span class="text-neutral-300 text-sm">({ tag.TagTranslations.En })</span>
+					}
+				</div>
+			}
+		}
+	</div>
+}

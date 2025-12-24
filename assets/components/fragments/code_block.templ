@@ -1,0 +1,26 @@
+package fragments
+
+// CodeBlock renders a code block with children content.
+templ CodeBlock(title string, subtitle []string) {
+	<div>
+		<div class="flex flex-col border border-b-0 border-neutral-700 bg-neutral-800 rounded-t px-4 py-3 gap-2">
+			<div class="text-neutral-100 font-medium text-sm">{ title }</div>
+			if len(subtitle) > 0 {
+				<div class="flex flex-col gap-1">
+					for _, text := range subtitle {
+						<div class="text-neutral-400 text-xs font-normal">{ text }</div>
+					}
+				</div>
+			}
+		</div>
+		<pre class="border border-neutral-700 rounded-b font-mono bg-neutral-950 text-fuchsia-400 px-4 py-3">
+			{ children... }
+		</pre>
+	</div>
+}
+
+templ CodeBlockNoHeader() {
+	<pre class="rounded-md border border-neutral-700 font-mono bg-neutral-950 text-fuchsia-400 px-4 py-3">
+		{ children... }
+	</pre>
+}

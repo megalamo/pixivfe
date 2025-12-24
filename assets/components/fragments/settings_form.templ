@@ -1,0 +1,53 @@
+package fragments
+
+import "codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+
+type SettingsSelectCookieOption struct {
+	// text label
+	Label string
+	// form value; cookie value
+	Value string
+}
+
+// multiple choice
+// first option is always selected by default
+templ SettingsSelectCookie(section_name string, cookie_name cookie.CookieName, options []SettingsSelectCookieOption) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		cookie_value := cd.CookieList[cookie_name]
+		fieldoptions := []FieldsetOption{}
+		anychecked := false
+
+		for i, opt := range options {
+			// make sure only one option is checked
+			var checked bool
+			if anychecked {
+				checked = false
+			} else {
+				checked = cookie_value == opt.Value || (i == 0 && cookie_value == "")
+				if checked {
+					anychecked = true
+				}
+			}
+			fieldoptions = append(fieldoptions, FieldsetOption{
+				Label:   opt.Label,
+				Value:   opt.Value,
+				Checked: checked,
+				Default: i == 0,
+			})
+		}
+	}}
+	<form action="/settings/set_cookie" method="post" class="contents">
+		<input type="hidden" name="key" value={ string(cookie_name) }/>
+		@Fieldset(FieldsetConfig{
+			Label:     section_name,
+			InputName: "value",
+			InputType: "select",
+			Options:   fieldoptions,
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}

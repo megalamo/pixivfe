@@ -1,0 +1,117 @@
+// Copyright 2023 - 2025, VnPower and the PixivFE contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package fragments
+
+import "fmt"
+
+// SelectableImageGridItem defines a single item in the grid.
+type SelectableImageGridItem struct {
+	ImageURL string // The URL of the image to display.
+	Checked  *bool  // Whether the item is checked by default. Overrides the grid-level default.
+}
+
+// SelectableImageGridProps defines the properties for a grid of selectable images.
+type SelectableImageGridProps struct {
+	IDPrefix       string                    // A prefix to ensure generated IDs are unique across the page.
+	InputName      string                    // The 'name' attribute for all checkbox inputs.
+	SelectedText   string                    // Text shown in the overlay when an item is selected.
+	Items          []SelectableImageGridItem // The list of items to display in the grid.
+	DefaultChecked bool                      // The default checked state for items that don't specify one.
+}
+
+// SelectableImageGrid renders a grid of images that can be selected.
+templ SelectableImageGrid(props SelectableImageGridProps) {
+	<fieldset>
+		if len(props.Items) > 1 {
+			@Button(ButtonProps{
+				Icon:         ButtonIcon{Name: "done_all"},
+				Label:        "Select all images",
+				Variant:      ButtonVariantSecondary,
+				Size:         ButtonSizeSm,
+				Attrs:        templ.Attributes{"data-check-all": ""},
+				ExtraClasses: "mb-6",
+			})
+		}
+		<div class="flex flex-wrap gap-6" data-selectable-grid>
+			for i, item := range props.Items {
+				// Determine the checked state: use the item-specific value if it exists,
+				// otherwise fall back to the grid-level default.
+				{{
+					isChecked := props.DefaultChecked
+					if item.Checked != nil {
+						isChecked = *item.Checked
+					}
+				}}
+				@selectableImageItem(selectableImageItemProps{
+					ID:           fmt.Sprintf("%s_%d", props.IDPrefix, i),
+					InputName:    props.InputName,
+					ImageURL:     item.ImageURL,
+					Value:        fmt.Sprintf("%d", i),
+					Order:        i + 1,
+					SelectedText: props.SelectedText,
+					Checked:      isChecked,
+				})
+			}
+		</div>
+	</fieldset>
+}
+
+// selectableImageItemProps defines the properties for a single selectable image.
+type selectableImageItemProps struct {
+	ID           string
+	InputName    string
+	ImageURL     string
+	Value        string
+	Order        int
+	SelectedText string
+	Checked      bool
+}
+
+// selectableImageItem renders a single selectable image.
+//
+// NOTE: We intentionally use :focus-visible on the child input, via has-[input:focus-visible],
+// instead of :focus-within on the label.
+//
+// When the label is clicked, the associated (screen-reader-only) checkbox receives focus
+// and keeps it even after you click again to deselect. That leaves the label matching :focus-within
+// after the pointer leaves, so the blue outline appears to “stick”. Using :focus-visible limits the
+// focus ring to genuine keyboard focus, which is when we want a persistent focus indicator. Mouse
+// hover still shows the hover outline.
+templ selectableImageItem(props selectableImageItemProps) {
+	// Wrapper <label> with styling
+	<label
+		for={ props.ID }
+		class="relative isolate block w-32 rounded cursor-pointer outline-offset-6 has-[input:checked]:outline-offset-4 outline-dashed outline-2 outline-transparent has-[input:checked]:outline-blue-400 not-[input:focus-visible]:not-hover:has-[input:checked]:outline-solid has-[input:checked]:outline-dotted active:scale-[0.975] hover:outline-blue-400 has-[input:focus-visible]:outline-blue-400 transition duration-75 text-neutral-100"
+	>
+		// Input for state
+		<input
+			id={ props.ID }
+			type="checkbox"
+			name={ props.InputName }
+			value={ props.Value }
+			checked?={ props.Checked }
+			class="peer sr-only"
+		/>
+		// Order
+		if props.Order > 0 {
+			<div class="absolute inset-1 size-7 bg-neutral-900 rounded-full select-none z-20 flex items-center justify-center font-bold text-xs border border-neutral-700 transition duration-75">
+				{ fmt.Sprintf("%d", props.Order) }
+			</div>
+		}
+		// Decorative overlay when checked
+		<div
+			class="peer-checked:opacity-100 opacity-0 absolute inset-0 size-full bg-black/80 rounded select-none z-10 flex items-center justify-center gap-1 font-bold"
+			aria-hidden="true"
+		>
+			<div class="material-symbols-rounded-20">check</div>
+			<div>{ props.SelectedText }</div>
+		</div>
+		// Image
+		<img
+			src={ templ.URL(props.ImageURL) }
+			loading="lazy"
+			class="w-full aspect-square object-cover rounded"
+		/>
+	</label>
+}

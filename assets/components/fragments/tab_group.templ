@@ -1,0 +1,127 @@
+package fragments
+
+type TabGroupEntry struct {
+	Path      string
+	Name      string
+	Icon      string
+	IsDefault bool // If true, this entry will be active if ActiveState is not set
+}
+
+type TabGroupProps struct {
+	BaseURL        string
+	Entries        []TabGroupEntry
+	ActiveState    string
+	WrapperClasses string
+	Size           string
+	BaseShade      string // Controls the base neutral shade (e.g., "800", "700", "900")
+}
+
+templ TabGroup(props TabGroupProps) {
+	// hx-disinherit needs to be added to a parent element here
+	<div class="contents" hx-disinherit="*">
+		<ul
+			hx-boost="true"
+			hx-swap="show:none"
+			class={ templ.Classes(
+          "flex flex-nowrap shrink-0 w-fit max-w-full items-stretch overflow-x-auto rounded-lg gap-2",
+          getWrapperBorderClasses(props.BaseShade),
+          getBackgroundClass(props.BaseShade),
+          props.WrapperClasses,
+          templ.KV("text-sm p-2 py-1.5", props.Size == "medium" || props.Size == ""),
+          templ.KV("text-base p-1", props.Size == "large")) }
+		>
+			for _, entry := range props.Entries {
+				// A tab is active if its path matches the active state,
+				// or if no active state is provided and it's the default tab.
+				{{ var isActive = props.ActiveState == entry.Path || (props.ActiveState == "" && entry.IsDefault) }}
+				<a
+					class="contents"
+					href={ templ.URL(props.BaseURL + entry.Path) }
+				>
+					<li
+						if isActive {
+							data-active
+						}
+						class={ templ.Classes(
+                  "flex items-center rounded-md px-2 py-1.5 gap-2 transition",
+                  getTabClasses(props.BaseShade)) }
+					>
+						if entry.Icon != "" {
+							@templ.Raw(entry.Icon)
+						}
+						{ entry.Name }
+					</li>
+				</a>
+			}
+		</ul>
+	</div>
+}
+
+func getWrapperBorderClasses(baseShade string) string {
+	if baseShade == "" {
+		baseShade = "800"
+	}
+	return "border border-neutral-700"
+}
+
+func getBorderClass(baseShade string) string {
+	return getWrapperBorderClasses(baseShade)
+}
+
+func getBackgroundClass(baseShade string) string {
+	if baseShade == "" {
+		baseShade = "800"
+	}
+
+	switch baseShade {
+	case "900":
+		return "bg-neutral-900"
+	default: // "800"
+		return "bg-neutral-800"
+	}
+}
+
+func getTabClasses(baseShade string) templ.CSSClasses {
+	if baseShade == "" {
+		baseShade = "800"
+	}
+
+	switch baseShade {
+	case "900":
+		return templ.Classes(
+			"font-medium",
+			// Inactive state (default)
+			"hover:bg-neutral-800",
+			"text-neutral-400",
+			"fill-neutral-400",
+			"hover:text-neutral-300",
+			"hover:fill-neutral-300",
+			// Active state (when data-active attribute is present)
+			"data-active:bg-neutral-800",
+			"data-active:hover:bg-neutral-700",
+			"data-active:text-neutral-300",
+			"data-active:fill-neutral-300",
+			"data-active:border",
+			"data-active:border-neutral-700",
+			"data-active:hover:border-neutral-600",
+		)
+	default: // "800"
+		return templ.Classes(
+			"font-medium",
+			// Inactive state (default)
+			"hover:bg-neutral-700",
+			"text-neutral-300",
+			"fill-neutral-300",
+			"hover:text-neutral-100",
+			"hover:fill-neutral-100",
+			// Active state (when data-active attribute is present)
+			"data-active:bg-neutral-700",
+			"data-active:hover:bg-neutral-600",
+			"data-active:text-neutral-100",
+			"data-active:fill-neutral-100",
+			"data-active:border",
+			"data-active:border-neutral-600",
+			"data-active:hover:border-neutral-500",
+		)
+	}
+}

@@ -1,0 +1,25 @@
+package fragments
+
+// ComponentReturnInput defines the properties for a single input element
+// within the ComponentReturn container.
+type ComponentReturnInput struct {
+	Name  string
+	Value string
+	Type  string
+}
+
+// ComponentReturnProps defines the properties for the ComponentReturn component.
+type ComponentReturnProps struct {
+	Inputs []ComponentReturnInput
+}
+
+// ComponentReturn renders a hidden container with input elements, designed
+// to be returned by HTMX to store data in the DOM.
+templ ComponentReturn(props ComponentReturnProps) {
+	// "component-return-data" is a unique class name used to identify this container.
+	<div class="hidden component-return-data">
+		for _, input := range props.Inputs {
+			<input name={ input.Name } value={ input.Value } type={ input.Type }/>
+		}
+	</div>
+}

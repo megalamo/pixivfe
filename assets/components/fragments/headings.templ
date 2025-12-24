@@ -1,0 +1,107 @@
+package fragments
+
+import "codeberg.org/pixivfe/pixivfe/v3/config"
+
+type ContentHeadingProps struct {
+	Title       string
+	Description string
+	Eyebrow     string
+	Badge       string
+	Classes     string
+	Href        string
+	TitleSize   string
+}
+
+type ChevronLinkProps struct {
+	Href    string
+	Classes string
+}
+
+// ChevronLink renders a link with a moving chevron icon on hover
+templ ChevronLink(props ChevronLinkProps) {
+	<a href={ templ.URL(props.Href) } class={ templ.Classes("group/local flex items-center w-fit", props.Classes) }>
+		{ children... }
+		<div class="text-neutral-400 group-hover/local:text-neutral-100 group-hover/local:translate-x-1/12 transition material-symbols-rounded-24">chevron_right</div>
+	</a>
+}
+
+// ContentHeading renders a title and description for a content section.
+templ ContentHeading(props ContentHeadingProps) {
+	// This outer div acts as the full-width grid container.
+	<div class={ templ.Classes("flex items-center text-start col-span-full w-full gap-4", props.Classes) }>
+		if props.Href == "" {
+			<div>
+				if props.Eyebrow != "" {
+					<div class="text-neutral-400 font-normal text-xs">
+						@templ.Raw(props.Eyebrow)
+					</div>
+				}
+				<div class="flex flex-wrap items-center gap-2">
+					<div
+						class={ templ.Classes("text-neutral-100 font-medium",
+					templ.KV("text-xl", props.TitleSize == "" || props.TitleSize == "xl"),
+					templ.KV("text-lg",props.TitleSize == "lg"),
+					templ.KV("text-base",props.TitleSize == "md"),
+          templ.KV("text-sm",props.TitleSize == "sm")) }
+					>
+						@templ.Raw(props.Title)
+					</div>
+					if props.Badge != "" {
+						@badge(props.Badge)
+					}
+				</div>
+				if props.Description != "" {
+					<div class="text-neutral-400 font-normal text-sm mt-2">
+						@templ.Raw(props.Description)
+					</div>
+				}
+			</div>
+		} else {
+			<a href={ templ.URL(props.Href) } class="group/local contents">
+				<div class="w-fit">
+					if props.Eyebrow != "" {
+						<div class="text-neutral-400 font-normal text-xs">
+							@templ.Raw(props.Eyebrow)
+						</div>
+					}
+					<div class="flex flex-wrap items-center gap-2">
+						<div
+							class={ templ.Classes("text-neutral-100 font-medium",
+                templ.KV("text-xl", props.TitleSize == "" || props.TitleSize == "xl"),
+                templ.KV("text-lg",props.TitleSize == "lg"),
+                templ.KV("text-base",props.TitleSize == "md")) }
+						>
+							@templ.Raw(props.Title)
+						</div>
+						if props.Badge != "" {
+							@badge(props.Badge)
+						}
+						<div class="text-neutral-400 group-hover/local:text-neutral-100 group-hover/local:translate-x-1/12 transition material-symbols-rounded-24">chevron_right</div>
+					</div>
+					if props.Description != "" {
+						<div class="text-neutral-400 font-normal text-sm mt-2">
+							@templ.Raw(props.Description)
+						</div>
+					}
+				</div>
+			</a>
+		}
+		if config.Global.Feature.OpenAllButton {
+			<button class="outlined-button text-sm font-medium gap-2" is="button-open-all" hidden>Open all</button>
+		}
+	</div>
+}
+
+templ badge(text string) {
+	<div class="bg-neutral-800 text-neutral-100 font-medium px-2 py-1 rounded text-xs">
+		{ text }
+	</div>
+}
+
+templ Section(props ContentHeadingProps) {
+	<section>
+		// TODO: section heading semantically should be h2
+		@ContentHeading(props)
+		{ children... }
+	</section>
+}

@@ -1,0 +1,334 @@
+package fragments
+
+import (
+	"fmt"
+
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+// LikeData represents the data required to like a work.
+type LikeData struct {
+	ID    string // Artwork ID
+	Likes int
+}
+
+// UnlikeData represents the data required to render a "liked" state.
+type UnlikeData struct {
+	Likes int
+}
+
+// AddBookmarkData represents the data required to add a bookmark for a work.
+type AddBookmarkData struct {
+	ID string // Artwork ID
+}
+
+// DeleteBookmarkData represents the data required to delete a bookmark for a work.
+type DeleteBookmarkData struct {
+	ID           string // Artwork ID
+	BookmarkData *core.BookmarkData
+}
+
+templ LikePartial(props LikeData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+	}}
+	<form
+		action={ templ.URL("/self/like/" + props.ID) }
+		method="post"
+		hx-target="this"
+		hx-target-4*="body"
+		hx-swap="outerHTML show:none"
+		hx-disabled-elt="#likeButton"
+		hx-push-url="false"
+	>
+		<input
+			type="hidden"
+			id="like_return_path"
+			name="return_path"
+			class="hidden"
+			value={ returnPath }
+		/>
+		<input type="hidden" id="like_count" name="like_count" class="hidden" value={ fmt.Sprint(props.Likes) }/>
+		<button
+			id="likeButton"
+			type="submit"
+			class="outlined-button text-sm font-medium gap-2"
+		>
+			<span class="material-symbols-rounded-20">thumb_up</span>
+			<span class="inline">{ template.PrettyNumber(props.Likes) }</span>
+		</button>
+	</form>
+}
+
+templ UnlikePartial(props UnlikeData) {
+	<button
+		disabled
+		class="outlined-button text-sm font-medium gap-2"
+		title="You can only like a work once a day."
+	>
+		<span class="material-symbols-rounded-fill-20">thumb_up</span>
+		<span class="inline">{ template.PrettyNumber(props.Likes) }</span>
+	</button>
+}
+
+templ AddBookmarkPartial(illust core.Illust) {
+	{{
+		cd := CommonData(ctx)
+		bookmarkDefaultPrivate := cd.CookieList[cookie.BookmarkDefaultPrivateCookie] == "true"
+	}}
+	// FIXME: BookmarkDefaultPrivateCookie updates unnecessarily include bookmark data
+	// due to the hx-post trigger being inside a form; low priority to fix
+	@ComponentReturn(ComponentReturnProps{
+		Inputs: []ComponentReturnInput{
+			{Name: "return_component", Value: "true", Type: "hidden"},
+			{Name: "component_return_action", Value: "toggle_cookie", Type: "hidden"},
+			{Name: "key", Value: string(cookie.BookmarkDefaultPrivateCookie), Type: "hidden"},
+			{
+				Name:  string(cookie.BookmarkDefaultPrivateCookie),
+				Value: map[bool]string{true: "true", false: "false"}[bookmarkDefaultPrivate],
+				Type:  "hidden",
+			},
+		},
+	})
+	<form
+		action={ templ.URL("/self/addBookmark/" + illust.ID) }
+		method="post"
+		hx-target="this"
+		hx-target-4*="body"
+		hx-swap="outerHTML show:none"
+		hx-disabled-elt="#addBookmarkButton, #bookmarkPrivacyToggle"
+		hx-push-url="false"
+	>
+		<div class="flex items-center group/addBookmarkButtonGroup">
+			<input
+				type="checkbox"
+				id="bookmarkPrivacyInput"
+				name="private"
+				class="hidden"
+				checked?={ bookmarkDefaultPrivate }
+				hx-post="/settings/set_cookie"
+				hx-trigger="change"
+				hx-target="previous .component-return-data"
+				hx-swap="outerHTML"
+				hx-include="previous .component-return-data"
+				data-no-loading-indicator
+			/>
+			{{
+				var returnPath = cd.CurrentPath
+				if cd.HtmxCurrentPath != "" {
+					returnPath = cd.HtmxCurrentPath
+				}
+			}}
+			<input
+				type="hidden"
+				id="bookmark_return_path"
+				name="return_path"
+				class="hidden"
+				value={ returnPath }
+			/>
+			<input type="hidden" id="bookmark_count" name="bookmark_count" class="hidden" value={ fmt.Sprint(illust.Bookmarks) }/>
+			<button
+				id="addBookmarkButton"
+				type="submit"
+				class={ templ.Classes(
+					"flex items-center w-fit rounded-s-full select-none cursor-pointer transition gap-2 py-2 px-3",
+					"text-sm font-medium",
+					"border border-neutral-600 text-neutral-200 fill-neutral-200",
+					"hover:border-neutral-500 hover:bg-neutral-700",
+					"active:bg-neutral-800 active:scale-95",
+					"disabled:text-neutral-500 disabled:fill-neutral-500 disabled:border-neutral-800 disabled:cursor-not-allowed",
+					"disabled:hover:border-neutral-800 disabled:hover:bg-transparent disabled:active:scale-100",
+				) }
+			>
+				<span class="material-symbols-rounded-20">favorite</span>
+				<span class="inline">{ template.PrettyNumber(illust.Bookmarks) }</span>
+			</button>
+			<!-- nesting a label inside a button then using tailwind to style it based on the parent's disabled attribute is super cursed but it works (though theres a weird delay as hx-disabled-elt finds elements to disable) -->
+			<button
+				type="button"
+				id="bookmarkPrivacyToggle"
+				class="group/bookmarkPrivacyToggle"
+			>
+				<label
+					for="bookmarkPrivacyInput"
+					class={ templ.Classes(
+						"-ms-[1px]",
+						"flex items-center w-fit rounded-e-full select-none cursor-pointer transition gap-2 py-2 px-3",
+						"text-sm font-medium",
+						"border border-neutral-600 text-neutral-200 fill-neutral-200",
+						"hover:border-neutral-500 hover:bg-neutral-700",
+						"active:bg-neutral-800 active:scale-95",
+						"group-disabled/bookmarkPrivacyToggle:text-neutral-500 group-disabled/bookmarkPrivacyToggle:fill-neutral-500",
+						"group-disabled/bookmarkPrivacyToggle:border-neutral-800 group-disabled/bookmarkPrivacyToggle:cursor-not-allowed",
+						"group-disabled/bookmarkPrivacyToggle:hover:border-neutral-800 group-disabled/bookmarkPrivacyToggle:hover:bg-transparent",
+						"group-disabled/bookmarkPrivacyToggle:active:scale-100",
+					) }
+				>
+					<!-- Public icon -->
+					<span
+						class={ templ.Classes(
+							"material-symbols-rounded-20",
+							"group-has-[input:checked]/addBookmarkButtonGroup:!hidden !inline",
+						) }
+					>
+						visibility
+					</span>
+					<!-- Private icon -->
+					<span
+						class={ templ.Classes(
+							"material-symbols-rounded-20",
+							"group-has-[input:checked]/addBookmarkButtonGroup:!inline !hidden",
+						) }
+					>
+						visibility_off
+					</span>
+				</label>
+			</button>
+		</div>
+	</form>
+}
+
+templ DeleteBookmarkPartial(illust core.Illust) {
+	{{ cd := CommonData(ctx) }}
+	<form
+		action={ templ.URL("/self/deleteBookmark/" + illust.BookmarkData.ID) }
+		method="post"
+		hx-target="this"
+		hx-target-4*="body"
+		hx-swap="outerHTML show:none"
+		hx-disabled-elt="#deleteBookmarkButton"
+		hx-push-url="false"
+	>
+		<input type="hidden" id="bookmark_artwork_id" name="artwork_id" class="hidden" value={ illust.ID }/>
+		{{
+			var returnPath = cd.CurrentPath
+			if cd.HtmxCurrentPath != "" {
+				returnPath = cd.HtmxCurrentPath
+			}
+		}}
+		<input
+			type="hidden"
+			id="bookmark_return_path"
+			name="return_path"
+			class="hidden"
+			value={ returnPath }
+		/>
+		<input type="hidden" id="bookmark_count" name="bookmark_count" class="hidden" value={ fmt.Sprint(illust.Bookmarks) }/>
+		<button
+			id="deleteBookmarkButton"
+			type="submit"
+			class="outlined-button text-sm font-medium gap-2"
+		>
+			<span class="material-symbols-rounded-fill-20">favorite</span>
+			<span class="inline">{ template.PrettyNumber(illust.Bookmarks) }</span>
+		</button>
+	</form>
+}
+
+templ QuickAddBookmark(props AddBookmarkData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+	}}
+	<form
+		action={ templ.URL("/self/addBookmark/" + props.ID) }
+		method="post"
+		hx-target="this"
+		hx-target-4*="body"
+		hx-swap="outerHTML show:none"
+		hx-push-url="false"
+		hx-indicator="this"
+		class="contents"
+	>
+		<input
+			type="hidden"
+			name="render_type"
+			value="quick"
+		/>
+		<input
+			type="hidden"
+			name="artwork_id"
+			value={ props.ID }
+		/>
+		<input
+			type="hidden"
+			name="return_path"
+			value={ returnPath }
+		/>
+		<button
+			type="submit"
+			class="flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90"
+		>
+			<span class="material-symbols-rounded-20">
+				favorite
+			</span>
+		</button>
+	</form>
+}
+
+templ QuickDeleteBookmark(props DeleteBookmarkData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+
+		var actionURL = ""
+		// Ensure BookmarkData and its ID are not nil before constructing the URL
+		//
+		// TODO: Fallback or error handling if BookmarkData or its ID is missing
+		if props.BookmarkData != nil && props.BookmarkData.ID != "" {
+			actionURL = "/self/deleteBookmark/" + props.BookmarkData.ID
+		}
+	}}
+	// Only render the form if a valid action URL can be constructed
+	if actionURL != "" {
+		<form
+			action={ templ.URL(actionURL) }
+			method="post"
+			hx-target="this"
+			hx-target-4*="body"
+			hx-swap="outerHTML show:none"
+			hx-push-url="false"
+			hx-indicator="this"
+			class="contents"
+		>
+			<input
+				type="hidden"
+				name="render_type"
+				value="quick"
+			/>
+			<input
+				type="hidden"
+				name="artwork_id"
+				value={ props.ID }
+			/>
+			<input
+				type="hidden"
+				name="return_path"
+				value={ returnPath }
+			/>
+			<button
+				type="submit"
+				class="flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90"
+			>
+				<span class="material-symbols-rounded-fill-20">
+					favorite
+				</span>
+			</button>
+		</form>
+	}
+}

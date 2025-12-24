@@ -1,0 +1,469 @@
+package fragments
+
+import (
+	"context"
+	"net/url"
+	"strconv"
+	"strings"
+
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+)
+
+// ChipItem represents a generic item that can be displayed in a list.
+type ChipItem struct {
+	Name            string // Display name of the item
+	Href            string // URL/href attribute for the link
+	Subtitle        string // Optional subtitle text (e.g., translation)
+	OriginalKeyword string // Original keyword this item is completing (for tag completions)
+}
+
+// HorizontalChipListProps contains the properties for the HorizontalChipList component.
+type HorizontalChipListProps struct {
+	// Items is a slice of ChipItem containing the primary items to display.
+	//
+	// When `AsTags` is true, this slice is also scanned for special tags
+	// (e.g., "R-18", "Original", "AI生成"). These tags are given special styling
+	// and rendering, and may be "hoisted" out of the main list to appear first.
+	// See the `AsTags` prop for more details.
+	Items []ChipItem
+
+	// The name of the chip item to highlight with a distinct background color.
+	//
+	// This property has no effect when `AsTags` is true.
+	HighlightedName string
+
+	// Additional CSS classes to apply to the main scrollable wrapper div.
+	WrapperClasses string
+
+	// Additional CSS classes to apply to each individual chip item's container.
+	ItemClasses string
+
+	// If true, renders the iterator + 1 in chip items as a keyboard key.
+	//
+	// Primarily used for search completions.
+	ShouldRenderKey bool
+
+	// Controls the padding and layout of the chips.
+	//
+	// Valid values are "normal" (default) and "compact".
+	Size string
+
+	// AsTags enables a special rendering mode for displaying work tags, which
+	// changes the component's behavior significantly.
+	//
+	// When true:
+	// - The component will render distinct, styled tags for content
+	//   rating ("R-18", "R-18G"), AI-generated content, "Original" works, "Manga",
+	//   and "Ugoira". The presence of these tags is determined by a combination of
+	//   the `AIType` and `XRestrict` props and by scanning the `Items` slice.
+	// - All tag links are automatically appended with
+	//   query parameters (e.g., `category=manga`, `mode=r18`) based on the
+	//   work's properties (`IllustType`, `XRestrict`, `NovelGenre`).
+	// - The `HighlightedName` prop is ignored.
+	AsTags bool
+
+	// The base AI type of the work. A definitive "AI-generated" tag will be
+	// rendered if this is set to indicate AI generation OR if a known AI tag
+	// (e.g. "AI生成") is found in the `Items` slice.
+	AIType core.AIType
+
+	// The type of illustration (e.g., Manga, Ugoira).
+	//
+	// This does NOT render a tag directly. Instead, it sets the correct search category
+	// (e.g., "manga") in the query parameters of all generated tag links.
+	IllustType *core.IllustType
+
+	// The base content rating of the work.
+	//
+	// This is used to determine the final rating, which may be upgraded
+	// to a more restrictive level (e.g. from `R18` to `R18G`)
+	// if a corresponding tag is found in the `Items` slice.
+	//
+	// The final rating is used to render a definitive tag (e.g., "R-18G") and
+	// to set the `mode=r18` query parameter on all tag links.
+	XRestrict *core.XRestrict
+
+	// The novel's genre ID string.
+	//
+	// If provided (and not an empty string):
+	// 1. All other tag links in the list are forced to search in the "novels" category.
+	// 2. If the genre ID is a valid, non-zero value, a static, non-interactive tag
+	//    with the resolved genre name is rendered.
+	NovelGenre string
+}
+
+// TagsToChipItems converts core.Tags to []ChipItem for use with HorizontalChipList.
+func TagsToChipItems(tags core.Tags) []ChipItem {
+	items := make([]ChipItem, len(tags))
+	for i, tag := range tags {
+		href := "/search"
+		if tag.Name != "" {
+			href += "?name=" + url.QueryEscape(tag.Name)
+		}
+		items[i] = ChipItem{
+			Name:     tag.Name,
+			Href:     href,
+			Subtitle: tag.TagTranslations.En,
+		}
+	}
+	return items
+}
+
+// NavCategoryToChipItems converts []NavCategory to []fragments.ChipItem for use with HorizontalChipList.
+func NavCategoryToChipItems(categories []pixivision.NavCategory) []ChipItem {
+	items := make([]ChipItem, len(categories))
+	for i, category := range categories {
+		items[i] = ChipItem{
+			Name: category.Name,
+			Href: category.Href,
+			// Subtitle: category.Group,
+		}
+	}
+	return items
+}
+
+// TagCompletionsToChipItems converts tag completion candidates to []ChipItem for use with HorizontalChipList.
+func TagCompletionsToChipItems(keywordCompletions core.KeywordCompletions, category string) []ChipItem {
+	var items []ChipItem
+
+	for _, candidate := range keywordCompletions.Candidates {
+		href := "/search?name=" + url.QueryEscape(candidate.TagName)
+		if category != "" {
+			href += "&category=" + url.QueryEscape(category)
+		}
+
+		items = append(items, ChipItem{
+			Name:            candidate.TagName,
+			Href:            href,
+			Subtitle:        candidate.TagTranslation,
+			OriginalKeyword: keywordCompletions.Keyword,
+		})
+	}
+	return items
+}
+
+// withQueryParams adds query parameters to a base URL string.
+func withQueryParams(baseHref string, params map[string]string) string {
+	if len(params) == 0 {
+		return baseHref
+	}
+	u, err := url.Parse(baseHref)
+	if err != nil {
+		// If parsing fails, return the original href to avoid breaking the link.
+		return baseHref
+	}
+	q := u.Query()
+
+	for key, value := range params {
+		q.Set(key, value)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// isMangaTag checks for the "漫画" tag.
+func isMangaTag(name string) bool {
+	return name == core.SearchMangaKeyword
+}
+
+// isUgoiraTag checks for the "うごイラ" tag.
+func isUgoiraTag(name string) bool {
+	return name == core.SearchUgoiraKeyword
+}
+
+// isOriginalTag checks for various permutations of the "Original" tag.
+func isOriginalTag(name string) bool {
+	lowerName := strings.ToLower(name)
+	return lowerName == "original" || lowerName == "オリジナル"
+}
+
+// horizontalChipListViewModel holds the processed data ready for rendering by the HorizontalChipList component.
+type horizontalChipListViewModel struct {
+	// Config
+	Size            string
+	WrapperClasses  string
+	ItemClasses     string
+	ShouldRenderKey bool
+	HighlightedName string
+
+	// Processed Data
+	IsAI            bool
+	XRestrictString string
+	OriginalItem    *ChipItem
+	MangaItem       *ChipItem
+	UgoiraItem      *ChipItem
+	NovelGenreName  string
+	OtherItems      []ChipItem
+
+	// Helpers
+	TagQueryParams map[string]string
+}
+
+// newHorizontalChipListViewModel processes the raw props and prepares them for rendering in the template.
+func newHorizontalChipListViewModel(ctx context.Context, props HorizontalChipListProps) horizontalChipListViewModel {
+	vm := horizontalChipListViewModel{
+		Size:            props.Size,
+		WrapperClasses:  props.WrapperClasses,
+		ItemClasses:     props.ItemClasses,
+		ShouldRenderKey: props.ShouldRenderKey,
+		HighlightedName: props.HighlightedName,
+		TagQueryParams:  make(map[string]string), // Always initialize.
+	}
+	if vm.Size == "" {
+		vm.Size = "normal"
+	}
+
+	isAI := props.AIType == core.AIGenerated
+	currentXRestrict := props.XRestrict
+
+	if props.AsTags {
+		// This block processes `props.Items` to find and filter out definitive tags (AI, rating, original, etc.),
+		// and updates the overall work attributes (`isAI`, `currentXRestrict`) accordingly.
+		var otherItems []ChipItem
+		for _, item := range props.Items {
+			// Check for known AI tags
+			if core.IsKnownAITag(item.Name) {
+				isAI = true
+			}
+
+			if isOriginalTag(item.Name) {
+				if vm.OriginalItem == nil {
+					vm.OriginalItem = &item
+				}
+				continue // Always skip original tags from the main list.
+			}
+
+			if isMangaTag(item.Name) {
+				if vm.MangaItem == nil {
+					vm.MangaItem = &item
+				}
+				continue
+			}
+
+			if isUgoiraTag(item.Name) {
+				if vm.UgoiraItem == nil {
+					vm.UgoiraItem = &item
+				}
+				continue
+			}
+
+			// Check for R-18/R-18G tags and potentially upgrade the rating.
+			if core.ParseXRestrict(item.Name).IsNSFWRating() {
+				var tagRestrict core.XRestrict
+				if strings.Contains(strings.ToLower(item.Name), "g") { // FIXME: This is a hack.
+					tagRestrict = core.R18G
+				} else {
+					tagRestrict = core.R18
+				}
+				// Upgrade the restriction level if the tag is more restrictive,
+				// or if no restriction was set initially.
+				if currentXRestrict == nil || tagRestrict > *currentXRestrict {
+					newRestrict := tagRestrict
+					currentXRestrict = &newRestrict
+				}
+				// Always consume the tag to prevent duplicates.
+				continue
+			}
+			otherItems = append(otherItems, item)
+		}
+		vm.OtherItems = otherItems
+		vm.IsAI = isAI
+
+		// Set definitive rating string for display, based on final calculated restriction level.
+		if currentXRestrict != nil && *currentXRestrict > core.Safe {
+			vm.XRestrictString = currentXRestrict.Tr(ctx)
+		}
+
+	} else {
+		// For all other cases (e.g., nav categories), just use the items as provided
+		// without any special processing.
+		vm.OtherItems = props.Items
+	}
+
+	// Prepare query parameters to be added to ALL chip links based on the work's attributes,
+	// regardless of whether `AsTags` is true.
+	if currentXRestrict != nil && *currentXRestrict > core.Safe {
+		vm.TagQueryParams["mode"] = strings.ToLower(currentXRestrict.UnhyphenatedString())
+	}
+
+	// Set the category for tag searches based on the work type.
+	if props.NovelGenre != "" {
+		// If this is a novel (i.e., NovelGenre is set), all tag links should point to novel searches.
+		vm.TagQueryParams["category"] = core.SearchNovelsCategory
+
+		// Only display a genre tag if the genre is a valid, non-zero value.
+		if props.NovelGenre != "0" {
+			vm.NovelGenreName = core.NovelGenre(ctx, props.NovelGenre)
+		}
+	} else if props.IllustType != nil {
+		// If this is an illustration, set the category based on its specific type.
+		switch *props.IllustType {
+		case core.Illustration:
+			vm.TagQueryParams["category"] = core.SearchIllustrationsCategory
+		case core.Manga:
+			vm.TagQueryParams["category"] = core.SearchMangaCategory
+		case core.Ugoira:
+			vm.TagQueryParams["category"] = core.SearchUgoiraCategory
+		case core.Novels:
+			vm.TagQueryParams["category"] = core.SearchNovelsCategory
+		default:
+			// Default to no category query parameter.
+		}
+	}
+	return vm
+}
+
+// chipContainer is a private component that wraps chip content in a link with appropriate data attributes.
+templ chipContainer(href templ.SafeURL, tagName, originalKeyword string, baseClasses templ.CSSClasses, dynamicClasses string) {
+	<a
+		href={ href }
+		class="contents"
+		if tagName != "" {
+			data-tag-name={ tagName }
+		}
+		if originalKeyword != "" {
+			data-original-keyword={ originalKeyword }
+		}
+	>
+		<div class={ templ.Classes(baseClasses, dynamicClasses) }>
+			{ children... }
+		</div>
+	</a>
+}
+
+// HorizontalChipList renders a horizontal scrolling list of chip-like items.
+//
+// Each chip is a link with a name and an optional subtitle.
+templ HorizontalChipList(props HorizontalChipListProps) {
+	{{
+		// Prepare the view model which contains all display logic.
+		// The template itself is now only responsible for rendering.
+		vm := newHorizontalChipListViewModel(ctx, props)
+
+		// Common classes for all chips in this list.
+		chipBaseClasses := templ.Classes(
+			"flex max-w-full gap-3 rounded transition",
+			vm.ItemClasses,
+			templ.KV("px-4 py-2", vm.Size == "normal"),
+			templ.KV("px-3 py-1.5", vm.Size == "compact"),
+			templ.KV("items-center", vm.ShouldRenderKey),
+		)
+
+		// Common classes for the text content within a chip.
+		chipContentClasses := templ.Classes(
+			"flex items-center max-w-full",
+			templ.KV("flex-col gap-1", vm.Size == "normal"),
+			templ.KV("flex-row gap-2", vm.Size == "compact"),
+		)
+	}}
+	<div class={ templ.Classes("flex items-stretch w-full overflow-x-auto gap-2 scroll-pe-24 pb-4 -mb-4", vm.WrapperClasses) }>
+		if props.AsTags {
+			// Render a definitive AI-generated tag if AIType is 2 or a known AI tag is present.
+			// This tag is not a link.
+			if vm.IsAI {
+				<a class="contents" data-tag-name="AI-generated">
+					<div class={ templ.Classes(chipBaseClasses, "border border-yellow-500 bg-yellow-500/10") }>
+						<div class={ chipContentClasses }>
+							<div class="text-sm text-white truncate">AI-generated</div>
+						</div>
+					</div>
+				</a>
+			}
+			// Render XRestrict tag.
+			if vm.XRestrictString != "" {
+				{{
+					// Construct the base href for the tag search and add common tag params.
+					baseHref := "/search?name=" + url.QueryEscape(vm.XRestrictString)
+					href := withQueryParams(baseHref, vm.TagQueryParams)
+				}}
+				@chipContainer(templ.URL(href), vm.XRestrictString, "", chipBaseClasses, "border border-red-500 bg-red-500/10 hover:bg-red-500/30") {
+					<div class={ chipContentClasses }>
+						<div class="text-sm text-white truncate">{ vm.XRestrictString }</div>
+					</div>
+				}
+			}
+			// Render the normalized "Original" tag next.
+			if vm.OriginalItem != nil {
+				{{ href := withQueryParams(vm.OriginalItem.Href, vm.TagQueryParams) }}
+				@chipContainer(templ.URL(href), vm.OriginalItem.Name, "", chipBaseClasses, "border border-blue-500 bg-blue-500/10 hover:bg-blue-500/30") {
+					<div class={ chipContentClasses }>
+						<div class="text-sm text-white truncate">{ vm.OriginalItem.Name }</div>
+						<div class="text-xs text-blue-400 truncate">Original</div>
+					</div>
+				}
+			}
+			// Render the "Manga" tag.
+			if vm.MangaItem != nil {
+				{{ href := withQueryParams(vm.MangaItem.Href, vm.TagQueryParams) }}
+				@chipContainer(templ.URL(href), vm.MangaItem.Name, "", chipBaseClasses, "border border-blue-500 bg-blue-500/10 hover:bg-blue-500/30") {
+					<div class={ chipContentClasses }>
+						<div class="text-sm text-white truncate">{ vm.MangaItem.Name }</div>
+						if vm.MangaItem.Subtitle != "" {
+							<div class="text-xs text-blue-400 truncate">{ vm.MangaItem.Subtitle }</div>
+						}
+					</div>
+				}
+			}
+			// Render the "Ugoira" tag.
+			if vm.UgoiraItem != nil {
+				{{ href := withQueryParams(vm.UgoiraItem.Href, vm.TagQueryParams) }}
+				@chipContainer(templ.URL(href), vm.UgoiraItem.Name, "", chipBaseClasses, "border border-blue-500 bg-blue-500/10 hover:bg-blue-500/30") {
+					<div class={ chipContentClasses }>
+						<div class="text-sm text-white truncate">{ vm.UgoiraItem.Name }</div>
+						if vm.UgoiraItem.Subtitle != "" {
+							<div class="text-xs text-blue-400 truncate">{ vm.UgoiraItem.Subtitle }</div>
+						}
+					</div>
+				}
+			}
+			// Render the novel genre separately as a static, non-interactive tag.
+			if vm.NovelGenreName != "" {
+				<div class={ templ.Classes(chipBaseClasses, "border border-blue-500 bg-blue-500/10") }>
+					<div class={ chipContentClasses }>
+						<div class="text-sm text-white truncate">{ vm.NovelGenreName }</div>
+					</div>
+				</div>
+			}
+		}
+		// Loop over the remaining items.
+		for i, item := range vm.OtherItems {
+			{{
+				var dynamicChipClasses string
+				if props.AsTags {
+					// "Original" tags are handled above.
+					// Emphasized tags that are not content ratings are still highlighted here.
+					if core.ParseXRestrict(item.Name).IsNSFWRating() {
+						dynamicChipClasses = "border border-red-500 bg-red-500/10 hover:bg-red-500/30"
+					} else {
+						dynamicChipClasses = "bg-neutral-800 hover:bg-neutral-700"
+					}
+				} else {
+					if item.Name == vm.HighlightedName {
+						dynamicChipClasses = "bg-neutral-700 hover:bg-neutral-600"
+					} else {
+						dynamicChipClasses = "bg-neutral-800 hover:bg-neutral-700"
+					}
+				}
+				href := withQueryParams(item.Href, vm.TagQueryParams)
+			}}
+			@chipContainer(templ.URL(href), item.Name, item.OriginalKeyword, chipBaseClasses, dynamicChipClasses) {
+				if vm.ShouldRenderKey {
+					@KeyboardKey(strconv.Itoa(i+1), "text-xs")
+				}
+				<div class={ chipContentClasses }>
+					<div class="text-sm text-white truncate">{ item.Name }</div>
+					if item.Subtitle != "" {
+						<div class="text-xs text-neutral-400 truncate">{ item.Subtitle }</div>
+					}
+				</div>
+			}
+		}
+	</div>
+}
+
+templ KeyboardKey(key string, extraClasses string) {
+	<div class={ templ.Classes("inline-block w-fit capitalize text-neutral-100 border border-neutral-700 bg-neutral-900 px-2 py-1 rounded", extraClasses) }>
+		{ key }
+	</div>
+}

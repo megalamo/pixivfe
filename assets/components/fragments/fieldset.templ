@@ -1,0 +1,215 @@
+package fragments
+
+// FieldsetOption represents a single option in a fieldset.
+type FieldsetOption struct {
+	// Unique identifier for the input element.
+	// Required for all input types except "select".
+	ID string
+
+	// Display text for the option.
+	// For "select": used as the option text (with optional annotations)
+	// For "text"/"number"/"date": used as the input label
+	// For "radio"/"checkbox": used as the check input label
+	Label string
+
+	// Value attribute for the input/option element.
+	Value string
+
+	// Optional help text displayed below the option.
+	// For "select": this is ignored; use HelpText on FieldsetConfig instead.
+	// For "radio"/"checkbox": shown below each option (vertical layout only)
+	// Not used for "text"/"number"/"date" inputs
+	HelpText string
+
+	// Whether this option is selected/checked.
+	// For "select": marks the option as selected
+	// For "radio"/"checkbox": marks the input as checked
+	// Not used for "text"/"number"/"date" inputs
+	Checked bool
+
+	// Whether this option is disabled.
+	// This is combined with the global `Disabled` flag on `FieldsetConfig`.
+	Disabled bool
+
+	// Whether this option is the default choice.
+	// Used only with "select" input type to render annotations like "(default)" or "(default, current)".
+	Default bool
+
+	// Placeholder text for "text"/"number"/"date" inputs.
+	Placeholder string
+
+	// CSS class for width, only applies to "select" input type.
+	// For "select" input type, if this is empty for all options, it defaults to "w-64".
+	// The first non-empty WidthClass encountered in the Options slice will be used
+	// for the overall <select> element's width.
+	WidthClass string
+}
+
+// FieldsetConfig contains all configuration for rendering a fieldset component.
+type FieldsetConfig struct {
+	// Label renders the <label> for the <select> element when InputType is "select".
+	// For "radio", if Layout is "horizontal", this renders a label for the group.
+	// For other input types, the label is taken from each FieldsetOption.Label.
+	Label string
+
+	// Layout for radio/checkbox inputs. "vertical" (default) or "horizontal".
+	Layout string
+
+	// Whether this option is required.
+	// Only applies to "select" input type.
+	Required bool
+
+	// Name attribute for all input elements.
+	InputName string
+
+	// Type of input: "select", "text", "number", "date", "radio", or "checkbox".
+	// - "select": renders a dropdown with options
+	// - "text", "number", "date": renders individual input fields for each option
+	// - "radio", "checkbox": renders form check inputs with labels
+	InputType string
+
+	// Global help text for the entire fieldset.
+	// For "select": shown below the dropdown.
+	// For other types, per-option help text can still be used.
+	HelpText string
+
+	// List of available options.
+	Options []FieldsetOption
+
+	// Extra classes to apply to the fieldset element.
+	ExtraClasses string
+
+	// Whether this fieldset and its inputs are disabled
+	Disabled bool
+}
+
+// Fieldset renders a configurable fieldset component that supports multiple input types:
+// - "select": dropdown with options, shows help text for selected option
+// - "text"/"number"/"date": individual labeled input fields
+// - "radio"/"checkbox": form check inputs with labels and help text
+templ Fieldset(config FieldsetConfig) {
+	<fieldset class={ templ.Classes("flex flex-col", config.ExtraClasses) }>
+		if config.InputType == "select" {
+			{{
+				// Determine the width class for the select element
+				selectWidthClass := "w-64" // Default width
+				foundCustomWidth := false
+				for _, option := range config.Options {
+					// Use the first non-empty WidthClass found among options
+					if option.WidthClass != "" && !foundCustomWidth {
+						selectWidthClass = option.WidthClass
+						foundCustomWidth = true
+					}
+				}
+			}}
+			if config.Label != "" {
+				<label for={ config.InputName } class="form-label mb-2">
+					{ config.Label }
+				</label>
+			}
+			<select
+				class={ templ.Classes("form-select", selectWidthClass, "max-w-full") }
+				id={ config.InputName }
+				name={ config.InputName }
+				required?={ config.Required }
+				disabled?={ config.Disabled }
+			>
+				for _, option := range config.Options {
+					{{
+						optionText := option.Label
+						if option.Default && option.Checked {
+							optionText = option.Label + " (default, current)"
+						} else if option.Default {
+							optionText = option.Label + " (default)"
+						} else if option.Checked {
+							optionText = option.Label + " (current)"
+						}
+					}}
+					<option value={ option.Value } selected?={ option.Checked }>{ optionText }</option>
+				}
+			</select>
+			if config.HelpText != "" {
+				<div id={ config.InputName + "-help" } class="form-text mt-1">
+					@templ.Raw(config.HelpText)
+				</div>
+			}
+		} else if config.InputType == "text" || config.InputType == "number" || config.InputType == "date" || config.InputType == "password" {
+			for i, option := range config.Options {
+				// Each option is wrapped in a div to control spacing between options.
+				<div class={ templ.Classes(templ.KV("mt-4", i > 0)) }>
+					// Margin bottom on the label creates space between it and the input.
+					<label for={ option.ID } class="form-label mb-2">
+						{ option.Label }
+					</label>
+					<input
+						class="form-control w-64 max-w-full"
+						type={ config.InputType }
+						name={ config.InputName }
+						id={ option.ID }
+						value={ option.Value }
+						placeholder?={ option.Placeholder != "" }
+						required?={ config.Required }
+						disabled?={ config.Disabled || option.Disabled }
+					/>
+					if option.HelpText != "" {
+						<div id={ option.ID + "-help" } class="form-text mt-1">
+							@templ.Raw(option.HelpText)
+						</div>
+					}
+				</div>
+			}
+		} else if config.InputType == "radio" || config.InputType == "checkbox" {
+			if config.Layout == "horizontal" {
+				if config.Label != "" {
+					<div class="form-label">{ config.Label }</div>
+				}
+				<div class={ templ.Classes("flex flex-wrap items-center gap-x-4 gap-y-2", templ.KV("mt-1", config.Label != "")) }>
+					for _, option := range config.Options {
+						<div class="form-check">
+							<input
+								class="form-check-input"
+								type={ config.InputType }
+								name={ config.InputName }
+								id={ option.ID }
+								value={ option.Value }
+								checked?={ option.Checked }
+								required?={ config.Required }
+								disabled?={ config.Disabled || option.Disabled }
+							/>
+							<label class="form-label" for={ option.ID }>{ option.Label }</label>
+						</div>
+					}
+				</div>
+				if config.HelpText != "" {
+					<div id={ config.InputName + "-help" } class="form-text mt-1">
+						@templ.Raw(config.HelpText)
+					</div>
+				}
+			} else {
+				// Vertical layout
+				for i, option := range config.Options {
+					<div class={ templ.Classes(templ.KV("mt-4", i > 0)) }>
+						<div class="form-check">
+							<input
+								class="form-check-input"
+								type={ config.InputType }
+								name={ config.InputName }
+								id={ option.ID }
+								value={ option.Value }
+								checked?={ option.Checked }
+								required?={ config.Required }
+								disabled?={ config.Disabled || option.Disabled }
+							/>
+							<label class="form-label" for={ option.ID }>{ option.Label }</label>
+						</div>
+						if option.HelpText != "" {
+							<div id={ option.ID + "-help" } class="form-text ms-[22px] mt-1">
+								@templ.Raw(option.HelpText)
+							</div>
+						}
+					</div>
+				}
+			}
+		}
+	</fieldset>
+}

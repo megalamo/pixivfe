@@ -1,0 +1,35 @@
+package fragments
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ AvatarUser(user *core.User, style string) {
+	<div class="flex items-center gap-4">
+		<div class="flex items-center gap-3">
+			<a
+				class="contents"
+				href={ templ.URL("/users/" + user.ID) }
+			>
+				<img
+					src={ user.Avatar }
+					alt={ user.Name }
+					class="aspect-square object-cover rounded-full size-10 shrink-0 avatar-outline-glow"
+				/>
+			</a>
+			<div>
+				<a
+					class="line-clamp-1 w-fit font-bold text-neutral-100 animated-underline"
+					href={ templ.URL("/users/" + user.ID) }
+				>
+					{ user.Name }
+				</a>
+				<div class="text-neutral-400 text-sm">
+					{ template.PrettyNumber(user.Following) } following
+				</div>
+			</div>
+		</div>
+		@FollowButtons(user.ID, user.IsFollowed, style)
+	</div>
+}

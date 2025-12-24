@@ -1,0 +1,167 @@
+package fragments
+
+import (
+	"fmt"
+	"strings"
+
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+type NovelGridProps struct {
+	Novels       []*core.NovelBrief
+	InSeriesList bool // TODO: Rename to ShouldRenderUser, which would be the opposite of this bool
+}
+
+templ NovelGrid(props NovelGridProps) {
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-12">
+		for i, novel := range props.Novels {
+			if i > 0 {
+				{{
+					// By default, the separator is hidden.
+					classParts := []string{"hidden"}
+
+					// On MD screens (2-col), show a separator before items that start a new row.
+					// A new row starts at index 2, 4, 6, etc. (i % 2 == 0)
+					// The separator must span 2 columns.
+					if i%2 == 0 {
+						classParts = append(classParts, "md:block")
+					}
+
+					// On LG screens (3-col), the rules change.
+					// A new row starts at index 3, 6, 9, etc. (i % 3 == 0)
+					if i%3 == 0 {
+						// Show the separator and make it span 3 columns.
+						// The `lg:` prefix overrides the `md:` classes.
+						classParts = append(classParts, "lg:block")
+					} else {
+						// If it's NOT the start of a new row on LG, it MUST be hidden.
+						// This is crucial for indices like 2 and 4, which were visible on MD.
+						classParts = append(classParts, "lg:hidden")
+					}
+
+					classes := strings.Join(classParts, " ")
+				}}
+				@Separator(classes)
+			}
+			@novelGridItem(novel, props.InSeriesList)
+		}
+	</div>
+}
+
+// NOTE: Prefer using NovelGrid instead.
+templ novelGridItem(novel *core.NovelBrief, inSeriesList bool) {
+	<div>
+		<div class="flex flex-row gap-4">
+			<a href={ templ.URL("/novel/" + novel.ID) } class="contents">
+				<img
+					src={ novel.CoverURL }
+					alt={ "Cover for " + novel.Title }
+					title={ "Cover for " + novel.Title }
+					class="size-auto max-h-16 shrink-0 aspect-[4x3] object-cover outline-glow rounded"
+					loading="lazy"
+				/>
+			</a>
+			// min-w-0 on this div to prevent the series button from overflowing
+			<div class="col-span-9 text-balance min-w-0">
+				// Novel title
+				<a
+					href={ templ.URL("/novel/" + novel.ID) }
+					title={ novel.Title }
+					class="text-link-alt w-fit max-w-full text-xl tracking-tight font-bold"
+				>
+					{ novel.Title }
+				</a>
+				// Author info
+				if !inSeriesList {
+					<div class="flex items-center gap-2 mt-2">
+						<a href={ templ.URL("/users/" + novel.UserID) } class="contents">
+							<img
+								src={ novel.UserAvatar }
+								alt={ novel.UserName }
+								class="aspect-square object-cover rounded-full size-5 shrink-0 avatar-outline-glow-sm"
+								loading="lazy"
+							/>
+						</a>
+						<a
+							href={ templ.URL("/users/" + novel.UserID) }
+							class="block w-fit max-w-full hover:text-neutral-100 text-neutral-400 !font-normal text-lg"
+						>
+							{ novel.UserName }
+						</a>
+					</div>
+				}
+				// Series name
+				if !inSeriesList && novel.SeriesID != "" {
+					<a
+						href={ templ.URL("/novel/series/" + novel.SeriesID) }
+						title={ novel.SeriesTitle }
+						class="tonal-button-neutral !block truncate w-fit max-w-full text-xs mt-4"
+					>
+						<span class="inline-block align-text-top material-symbols-rounded-16 me-1">collections_bookmark</span>
+						{ novel.SeriesTitle }
+					</a>
+				}
+			</div>
+		</div>
+		<div class="bg-neutral-800 border border-neutral-700/60 rounded-lg p-5 mt-6">
+			// Description
+			if novel.Description != "" {
+				<p class="description text-neutral-300 line-clamp-4 text-base/7 font-serif">
+					@templ.Raw(novel.Description)
+				</p>
+			} else {
+				<p class="text-neutral-400 text-base/7 italic">No description added</p>
+			}
+			<div class="col-span-full h-[1px] w-full bg-neutral-700/60 shrink-0 my-5"></div>
+			// Metadata
+			<div class="grid grid-cols-[auto_1fr] grid-flow-row text-sm text-neutral-400 gap-x-8 gap-y-4">
+				// Bookmark count
+				<div class="flex flex-nowrap items-center w-fit gap-1.5">
+					<span class="material-symbols-rounded-20">favorite</span>
+					if novel.Bookmarks == 0 {
+						<div><span class="font-semibold text-neutral-200">—</span></div>
+					} else {
+						<div><span class="font-semibold text-neutral-200">{ template.PrettyNumber(novel.Bookmarks) }</span> <span class="text-neutral-200">bookmarks</span></div>
+					}
+				</div>
+				// Word count
+				<div class="flex flex-nowrap items-center w-fit gap-1.5">
+					<span class="material-symbols-rounded-20">subject</span>
+					<div><span class="font-semibold text-neutral-200">{ template.PrettyNumber(novel.WordCount) }</span> <span class="text-neutral-200">words</span></div>
+				</div>
+				// Date created
+				<div class="flex flex-nowrap items-center w-fit gap-1.5" title={ template.NaturalTime(novel.CreateDate) }>
+					<span class="material-symbols-rounded-20">today</span>
+					<div>
+						<span class="font-semibold text-neutral-200">{ template.RelativeTime(novel.CreateDate).Value }</span>
+						<span class="text-neutral-200">{ template.RelativeTime(novel.CreateDate).Description }</span>
+						if template.RelativeTime(novel.CreateDate).Time != "" {
+							<span class="font-semibold text-neutral-200">{ template.RelativeTime(novel.CreateDate).Time }</span>
+						}
+					</div>
+				</div>
+				// Reading time
+				<div class="flex flex-nowrap items-center w-fit gap-1.5">
+					<span class="material-symbols-rounded-20">schedule</span>
+					<div><span class="font-semibold text-neutral-200">{ fmt.Sprintf("%d", template.Floor(float64(novel.ReadingTime) / 60)) }</span> <span class="text-neutral-200">min</span></div>
+				</div>
+			</div>
+		</div>
+		// Tags
+		if len(novel.Tags) > 0 || novel.Genre != "0" {
+			{{
+				props := HorizontalChipListProps{
+					Items:          TagsToChipItems(novel.Tags),
+					WrapperClasses: "flex-wrap mt-6",
+					Size:           "compact",
+					AsTags:         true,
+					AIType:         novel.AIType,
+					XRestrict:      &novel.XRestrict,
+					NovelGenre:     novel.Genre,
+				}
+			}}
+			@HorizontalChipList(props)
+		}
+	</div>
+}

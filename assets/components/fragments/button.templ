@@ -1,0 +1,128 @@
+package fragments
+
+import "fmt"
+
+// ButtonVariant defines the style of the button (e.g., primary, secondary).
+type ButtonVariant string
+
+const (
+	ButtonVariantPrimary   ButtonVariant = "primary"
+	ButtonVariantSecondary ButtonVariant = "secondary"
+	ButtonVariantTertiary  ButtonVariant = "tertiary"
+)
+
+// ButtonSize defines the padding and font size of the button.
+type ButtonSize string
+
+const (
+	ButtonSizeSm ButtonSize = "sm"
+	ButtonSizeMd ButtonSize = "md" // "md" for the default/medium size
+)
+
+// ButtonIcon holds the properties for an icon within the button.
+type ButtonIcon struct {
+	Name     string
+	IsFilled bool
+}
+
+// ButtonProps are the properties for the unified Button component.
+type ButtonProps struct {
+	Label        string
+	Icon         ButtonIcon
+	IsDisabled   bool
+	Title        string
+	Variant      ButtonVariant
+	Size         ButtonSize
+	Attrs        templ.Attributes // Useful for adding htmx attrs
+	ExtraClasses string           // Custom classes to append to the button element.
+}
+
+// getIconClass determines the correct CSS class for the material symbol
+// based on the button's size and whether the icon should be filled.
+func getIconClass(size ButtonSize, isFilled bool) string {
+	style := "rounded"
+	if isFilled {
+		style = "rounded-fill"
+	}
+
+	iconSize := "20"
+	if size == ButtonSizeSm {
+		iconSize = "16"
+	}
+
+	return fmt.Sprintf("material-symbols-%s-%s", style, iconSize)
+}
+
+// Define classes based on props to keep the HTML clean.
+var (
+	// Base classes are shared by all buttons.
+	baseButtonClasses = "group isolate relative inline-flex w-fit max-w-full items-center justify-center font-medium cursor-pointer disabled:cursor-not-allowed"
+
+	// Size-specific classes for the button element.
+	sizeClasses = map[ButtonSize]string{
+		ButtonSizeMd: "px-3 py-2 text-sm",
+		ButtonSizeSm: "px-2 py-1.5 text-xs",
+	}
+
+	// Size-specific gap classes for the content layer.
+	contentGapClasses = map[ButtonSize]string{
+		ButtonSizeMd: "gap-2",
+		ButtonSizeSm: "gap-1.5",
+	}
+
+	baseBackgroundClasses = "group-active:scale-95"
+
+	// Variant-specific classes for the background/border <span>.
+	backgroundClasses = map[ButtonVariant]string{
+		ButtonVariantPrimary:   fmt.Sprintf("%s %s", baseBackgroundClasses, "bg-neutral-100 group-hover:bg-neutral-400 group-disabled:bg-neutral-100/40 group-disabled:scale-100"),
+		ButtonVariantSecondary: fmt.Sprintf("%s %s", baseBackgroundClasses, "border border-neutral-500 group-hover:border-neutral-400 group-active:border-neutral-300 bg-neutral-700 group-hover:bg-neutral-600 group-active:bg-neutral-500 group-disabled:bg-neutral-700/40 group-disabled:border-neutral-600 group-disabled:scale-100"),
+		ButtonVariantTertiary:  fmt.Sprintf("%s %s", baseBackgroundClasses, "border border-neutral-600 group-hover:border-neutral-500 group-active:border-neutral-400 bg-neutral-800 group-hover:bg-neutral-700 group-active:bg-neutral-600 group-disabled:bg-neutral-800/40 group-disabled:border-neutral-700 group-disabled:scale-100"),
+	}
+
+	lightContentClasses = "text-neutral-900 group-hover:text-black group-active:text-black group-disabled:text-neutral-800"
+	darkContentClasses  = "text-neutral-100 group-hover:text-white group-active:text-white group-disabled:text-neutral-500"
+
+	// Variant-specific classes for the content <span> (text and icon).
+	contentClasses = map[ButtonVariant]string{
+		ButtonVariantPrimary:   lightContentClasses,
+		ButtonVariantSecondary: darkContentClasses,
+		ButtonVariantTertiary:  darkContentClasses,
+	}
+)
+
+// buttonContent renders the inner layers of the button, shared between enabled and disabled states.
+templ buttonContent(props ButtonProps) {
+	// Background and border layer
+	<span
+		aria-hidden="true"
+		class={ "absolute inset-0 rounded", backgroundClasses[props.Variant] }
+	></span>
+	// Content layer (icon and label)
+	<span class={ "relative z-10 flex items-center select-none", contentGapClasses[props.Size], contentClasses[props.Variant] }>
+		if props.Icon.Name != "" {
+			<span class={ getIconClass(props.Size, props.Icon.IsFilled) }>{ props.Icon.Name }</span>
+		}
+		if props.Label != "" {
+			<span>{ props.Label }</span>
+		}
+	</span>
+}
+
+// Default `type` is `"button"`; override by specifying `templ.Attributes{"type": "custom_type"}`
+templ Button(props ButtonProps) {
+	<button
+		class={ baseButtonClasses, sizeClasses[props.Size], props.ExtraClasses }
+		disabled?={ props.IsDisabled }
+		if props.Title != "" {
+			title={ props.Title }
+		}
+		if props.Attrs["type"] == nil {
+			type="button"
+		}
+		{ props.Attrs... }
+	>
+		@buttonContent(props)
+	</button>
+	// For scanning by scripts:
+	// <span class="material-symbols-rounded-20">done_all</span>
+}

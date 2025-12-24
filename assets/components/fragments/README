@@ -1,0 +1,9 @@
+This directory contains reusable UI fragments and smaller, self-contained components used across various parts of the application. These components are not full pages but rather pieces that can be embedded within layouts or other components.
+
+## Usage
+
+To use these components, import them using the path:
+
+```go
+import "codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+```

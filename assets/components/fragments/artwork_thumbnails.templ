@@ -1,0 +1,284 @@
+package fragments
+
+import (
+	"fmt"
+
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+type ArtworkGridItemProps struct {
+	ShowTitle      bool
+	ShowArtist     bool
+	ContainerClass string
+	UsePathLogic   bool // Use original path-based logic for showing artist
+}
+
+// Default props for backward compatibility
+func DefaultArtworkGridItemProps() ArtworkGridItemProps {
+	return ArtworkGridItemProps{
+		ShowTitle:      true,
+		ShowArtist:     true,
+		ContainerClass: "flex flex-col h-fit col-span-1 gap-2",
+		UsePathLogic:   true,
+	}
+}
+
+// ArtworkGrid handles collections of artworks
+templ ArtworkGrid(items []core.ArtworkItem) {
+	@artworkGridWithProps(items, DefaultArtworkGridItemProps())
+}
+
+// artworkGridWithProps handles collections of artworks with custom props
+templ artworkGridWithProps(items []core.ArtworkItem, props ArtworkGridItemProps) {
+	{{ cd := CommonData(ctx) }}
+	for _, item := range items {
+		if !item.ShouldHide(cd.CookieList) {
+			@ArtworkGridItem(item, props)
+		}
+	}
+}
+
+// ArtworkGridItem renders a single artwork thumbnail with configurable options
+templ ArtworkGridItem(item core.ArtworkItem, props ArtworkGridItemProps) {
+	{{ cd := CommonData(ctx) }}
+	<div class={ props.ContainerClass }>
+		if item.ID == "#" {
+			@deletedOrPrivateThumbnail(item.Title, item.UserName)
+		} else if item.ID != "" {
+			{{
+				target := cd.CookieList[cookie.ThumbnailToNewTabCookie]
+				visibilityR18 := cd.CookieList[cookie.VisibilityArtR18Cookie]
+				visibilityR18G := cd.CookieList[cookie.VisibilityArtR18GCookie]
+				visibilityAI := cd.CookieList[cookie.VisibilityArtAICookie]
+
+				itemAIType := item.AIType
+				itemXRestrict := item.XRestrict
+				artistId := item.UserID
+				pages := item.Pages
+				illustType := item.IllustType
+
+				showOverlay := false
+				overlayBgClass := ""
+				loadReplacementImage := false
+
+				if (itemXRestrict == 1 && visibilityR18 == "censor") || (itemXRestrict == 2 && visibilityR18G == "censor") {
+					showOverlay = true
+					overlayBgClass = "bg-black/80 group-hover/image:bg-black/40"
+					loadReplacementImage = true
+				} else if itemAIType == 2 && visibilityAI == "censor" {
+					showOverlay = true
+					overlayBgClass = "bg-black/80 group-hover/image:bg-black/40"
+				}
+
+				aspectClass := "aspect-square"
+				marginHack := ""
+				if !loadReplacementImage && template.IsFirstPathPart(cd.CurrentPath, "/ranking") && item.Width > item.Height {
+					aspectClass = "aspect-2/1"
+					marginHack = "-mb-[0.775rem]"
+				}
+
+				// For image src and width/height attributes
+				var imgSrc string
+				var imgWidthAttr, imgHeightAttr = "360px", "360px"
+
+				if loadReplacementImage {
+					imgSrc = "/img/nsfw.png"
+				} else {
+					if item.Thumbnails.MasterWebp_1200 != "" {
+						imgSrc = item.Thumbnails.MasterWebp_1200
+						imgWidthAttr, imgHeightAttr = "1200px", "1200px"
+					} else {
+						imgSrc = item.Thumbnail // Fallback
+					}
+				}
+
+				hxHeaders, _ := templ.JSONString(map[string]any{
+					"Fast-Request":                 "true",
+					"Artwork-ID":                   item.ID,
+					"Artwork-User-ID":              artistId,
+					"Artwork-Username":             item.UserName,
+					"Artwork-Title":                item.Title,
+					"Artwork-IllustType":           illustType,
+					"Artwork-Master-Webp-1200-Url": item.Thumbnails.MasterWebp_1200,
+					"Artwork-Original-Url":         item.Thumbnails.OriginalJPG,
+					"Artwork-Width":                item.Width,
+					"Artwork-Height":               item.Height,
+					"Artwork-Pages":                pages,
+				})
+
+				var rankBgColor, rankTextColor string = "bg-neutral-800/80", "text-white"
+				switch item.Rank {
+				case 1:
+					rankBgColor, rankTextColor = "bg-amber-400/90", "text-black"
+				case 2:
+					rankBgColor, rankTextColor = "bg-zinc-300/90", "text-black"
+				case 3:
+					rankBgColor, rankTextColor = "bg-amber-800/90", "text-white"
+				}
+
+				// Logic for showing the artist
+				shouldShowArtist := props.ShowArtist
+				if props.UsePathLogic {
+					shouldShowArtist = shouldShowArtist && (!template.IsFirstPathPart(cd.CurrentPath, "/users") ||
+						(template.IsFirstPathPart(cd.CurrentPath, "/users") && utils.GetMapParam(cd.Queries, "category") == "bookmarks"))
+					shouldShowArtist = shouldShowArtist && cd.CurrentPath != "/discovery/users"
+				}
+			}}
+			// Artwork thumbnail
+			<div class="group/image-wrapper relative">
+				<a
+					id={ "artwork-wrapper-" + item.ID }
+					target={ target }
+					href={ templ.URL("/artworks/" + item.ID) }
+					class="group/image relative flex rounded outline-glow overflow-hidden is-artwork"
+					hx-headers={ hxHeaders }
+				>
+					// Ugoira
+					if illustType == 2 {
+						<div class="flex absolute inset-2/4 -translate-x-1/2 -translate-y-1/2 justify-center items-center bg-black/75 group-hover/image:bg-black/50 group-hover/image:text-neutral-100/80 transition rounded-full p-7 z-1">
+							<span class="material-symbols-rounded-fill-48">
+								play_arrow
+							</span>
+						</div>
+					}
+					if showOverlay {
+						<div
+							class={ templ.Classes(
+										"flex flex-col items-center justify-center absolute size-full rounded inset-0 gap-2 z-2 transition",
+										templ.Class(overlayBgClass),
+									) }
+						>
+							<span
+								class="material-symbols-rounded-48 group-hover/image:opacity-0 opacity-100 text-neutral-400 transition-all"
+							>
+								visibility_off
+							</span>
+						</div>
+					}
+					// Top left badges
+					<div class="absolute top-2 left-2 flex flex-col gap-y-1">
+						if item.Rank != 0 {
+							<div
+								class={ templ.Classes(
+												"flex w-fit text-xl font-bold rounded-tl rounded-br drop-shadow px-3 py-1.5 -ms-2 -mt-2",
+												templ.Class(rankBgColor),
+												templ.Class(rankTextColor),
+											) }
+							>
+								{ fmt.Sprint(item.Rank) }
+							</div>
+						}
+						if item.XRestrict != 0 {
+							<div class="flex size-fit bg-red-700 text-white text-xs font-bold rounded drop-shadow px-1 py-0.5">
+								if item.XRestrict == 1 {
+									R-18
+								} else {
+									R-18G
+								}
+							</div>
+						}
+						if itemAIType == 2 {
+							<div class="flex size-fit bg-yellow-500 text-black text-xs font-bold rounded drop-shadow px-1 py-0.5">
+								AI
+							</div>
+						}
+					</div>
+					// Top right badges
+					if pages > 1 {
+						<div class="absolute top-2 right-2 flex items-center size-fit bg-neutral-800 text-sm font-bold rounded drop-shadow gap-x-1 px-1 py-0.5">
+							<div class="material-symbols-rounded-20">image</div>
+							<div>{ fmt.Sprint(pages) }</div>
+						</div>
+					}
+					<img
+						src={ imgSrc }
+						alt={ "Thumbnail for " + item.Title }
+						width={ imgWidthAttr }
+						height={ imgHeightAttr }
+						loading="lazy"
+						class={ templ.Classes(
+									"size-full object-cover rounded",
+									templ.Class(aspectClass),
+									templ.Class(marginHack),
+								) }
+					/>
+				</a>
+				if cd.LoggedIn {
+					if item.BookmarkData != nil {
+						@QuickDeleteBookmark(DeleteBookmarkData{ID: item.ID, BookmarkData: item.BookmarkData})
+					} else {
+						@QuickAddBookmark(AddBookmarkData{ID: item.ID})
+					}
+				}
+			</div>
+			// Artwork title
+			if props.ShowTitle {
+				<a
+					target={ target }
+					href={ templ.URL("/artworks/" + item.ID) }
+					title={ item.Title }
+					class="is-artwork text-link-alt line-clamp-1 w-fit max-w-full font-bold"
+					hx-headers={ hxHeaders }
+				>
+					{ item.Title }
+				</a>
+			}
+			// Artist avatar and name
+			if shouldShowArtist {
+				<div class="flex items-center gap-1.5 -mt-0.5">
+					if item.UserAvatar != "" {
+						<a href={ templ.URL("/users/" + item.UserID) } class="contents">
+							<img
+								src={ item.UserAvatar }
+								alt={ item.UserName + "'s avatar" }
+								class="avatar-outline-glow-sm aspect-square object-cover rounded-full size-6 shrink-0"
+								width="24px"
+								height="24px"
+								loading="lazy"
+							/>
+						</a>
+					}
+					<a
+						href={ templ.URL("/users/" + item.UserID) }
+						title={ item.UserName }
+						class="text-link-alt line-clamp-1 w-fit max-w-full text-neutral-400 hover:text-neutral-100 !font-normal"
+					>
+						{ item.UserName }
+					</a>
+				</div>
+			}
+		}
+	</div>
+}
+
+templ deletedOrPrivateThumbnail(title string, userName string) {
+	// Replicates the structure for ID == "#"
+	<img
+		src="/img/deleted.png"
+		alt="Thumbnail for a deleted or private artwork"
+		class="size-full rounded"
+		loading="lazy"
+	/>
+	<div class="line-clamp-1 w-fit max-w-full text-neutral-400 font-semibold">
+		{ title }
+	</div>
+	<div class="flex items-center gap-1.5 -mt-0.5">
+		<img
+			src="/img/deleted.png"
+			alt="Thumbnail for a deleted or private artwork"
+			class="aspect-square object-cover rounded-full size-6 shrink-0"
+			width="24px"
+			height="24px"
+			loading="lazy"
+		/>
+		<div
+			title={ userName }
+			class="line-clamp-1 w-fit max-w-full text-neutral-400"
+		>
+			{ userName }
+		</div>
+	</div>
+}

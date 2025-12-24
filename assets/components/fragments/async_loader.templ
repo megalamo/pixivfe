@@ -1,0 +1,87 @@
+package fragments
+
+import "net/url"
+
+// AsyncLoaderProps defines the configuration for the AsyncLoader component.
+type AsyncLoaderProps struct {
+	// The base URL for the htmx request (without query parameters).
+	BaseURL string
+
+	// Values to be encoded as query parameters in the URL.
+	Params url.Values
+
+	// The event that triggers the htmx request.
+	// Examples: "revealed", "load", "click".
+	Trigger string
+
+	// The htmx swap strategy.
+	Swap string
+
+	// Optional additional classes for the wrapper.
+	Classes string
+
+	// Optional text for the loading indicator.
+	LoadingText string
+
+	// If true, the default spinner and text will be replaced by the component's children.
+	// If false (default), children will be appended after the default loader.
+	// Defaults to false.
+	UseCustomLoader bool
+}
+
+templ AsyncLoader(props AsyncLoaderProps) {
+	{{
+		// Component defaults
+		var (
+			trigger = "revealed"
+			swap    = "outerHTML swap:100ms settle:200ms show:none"
+		)
+
+		if props.Trigger != "" {
+			trigger = props.Trigger
+		}
+		if props.Swap != "" {
+			swap = props.Swap
+		}
+
+		// Construct URL with query parameters.
+		var finalURL string
+
+		u, err := url.Parse(props.BaseURL)
+		if err != nil {
+			// On parse error, fall back to the raw BaseURL.
+			// TODO: Maybe log this.
+			finalURL = props.BaseURL
+		} else {
+			if props.Params != nil {
+				u.RawQuery = props.Params.Encode()
+			}
+			finalURL = u.String()
+		}
+	}}
+	// NOTE: Using display: flex as default state because display: none causes the parent element to trigger events like `revealed` for some reason
+	<div
+		hx-get={ templ.URL(finalURL) }
+		hx-trigger={ trigger }
+		hx-swap={ swap }
+		hx-indicator="this"
+		hx-target="this"
+		class={ templ.Classes("flex [.htmx-request]:flex [.htmx-swapping]:flex flex-col items-center justify-center w-full py-16 gap-3 opacity-100 [.htmx-swapping]:opacity-0 [.htmx-swapping]:duration-100 [.htmx-swapping]:scale-95 [.htmx-swapping]:blur-[px] scale-100 origin-center transition", props.Classes) }
+	>
+		if props.UseCustomLoader {
+			// If replacing, only render the children passed to the component.
+			{ children... }
+		} else {
+			// Default behavior: render the spinner and text, then append any children.
+			<div class="animate-spin rounded-full size-8 border-4 border-s-white border-white/20 shrink-0"></div>
+			<div class="text-sm text-neutral-400 text-center">
+				if props.LoadingText != "" {
+					{ props.LoadingText }
+				} else {
+					Fetching more content...
+				}
+			</div>
+			{ children... }
+		}
+	</div>
+}

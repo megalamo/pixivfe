@@ -1,0 +1,34 @@
+package fragments
+
+// Details renders a details element.
+//
+// Parameters:
+// - title: The main title for the details section.
+// - subtitle: Optional subtitle text displayed below the title.
+// - isOpen: Whether the details section should be initially open.
+templ Details(title string, subtitle []string, isOpen bool) {
+	<details
+		class="w-full group/details border border-neutral-700 not-open:hover:border-neutral-600 open:has-[summary:first-of-type:hover]:border-neutral-600 rounded"
+		if isOpen {
+			open
+		}
+	>
+		<summary class="flex items-start gap-2 hover:bg-neutral-800 transition list-none cursor-pointer text-neutral-100 p-3 rounded group-open/details:rounded-b-none">
+			<div class="material-symbols-rounded-20 text-neutral-400 group-open/details:rotate-90 transition">chevron_right</div>
+			<div class="flex flex-col gap-2">
+				<div class="text-neutral-100 text-sm font-medium">{ title }</div>
+				if len(subtitle) > 0 {
+					<div class="flex flex-col gap-1">
+						for _, text := range subtitle {
+							<div class="text-neutral-400 text-xs font-normal">{ text }</div>
+						}
+					</div>
+				}
+			</div>
+		</summary>
+		<div class="h-[1px] w-full hidden group-open/details:block bg-neutral-800"></div>
+		<div class="mx-10 my-5">
+			{ children... }
+		</div>
+	</details>
+}

@@ -1,0 +1,70 @@
+package fragments
+
+import (
+	"time"
+
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+)
+
+templ PixivisionEntry(data pixivision.ArticleTile, inListView bool) {
+	{{
+		// Use data.CategoryID directly if available, otherwise parse from Category
+		categoryID := data.CategoryID
+		if categoryID == "" {
+			parsedCategory := pixivision.PixivisionCategoryID(data.Category)
+			categoryID = parsedCategory.ID
+		}
+
+		// only render Category and tags if tags are also present
+		extended := categoryID != "" && len(data.Tags) > 0
+	}}
+	<div class={ templ.Classes("flex flex-col text-neutral-100 gap-4", templ.KV("lg:flex-row items-start", inListView)) }>
+		// Thumbnail
+		<a href={ templ.URL("/pixivision/a/" + data.ID) } class="group/image contents">
+			<div class={ templ.Classes("shrink-0 w-full overflow-hidden rounded group-outline-glow", templ.KV("lg:max-w-5/12", inListView)) }>
+				<img
+					src={ data.Thumbnail }
+					width="1200"
+					height="630"
+					class="rounded not-motion-reduce:group-hover/image:scale-[1.025] duration-300 aspect-40/21 object-cover"
+				/>
+			</div>
+		</a>
+		// Title
+		<div class="flex flex-col gap-4">
+			<a href={ templ.URL("/pixivision/a/" + data.ID) } class="contents">
+				<div
+					class={ templ.Classes("font-normal text-link-alt", 
+          templ.KV("text-lg", !inListView),
+           templ.KV("text-2xl", inListView),) }
+				>
+					{ data.Title }
+				</div>
+			</a>
+			// Publication date
+			if data.Date != (time.Time{}) {
+				<p class="text-sm text-neutral-400 -mt-2">
+					{ data.Date.Format("2 January 2006") }
+				</p>
+			}
+			// Category and tags
+			if extended {
+				<div class="flex flex-wrap items-center gap-2">
+					<a href={ templ.URL("/pixivision/c/" + categoryID) } class="contents">
+						<div class="badge-primary interactive">{ data.Category }</div>
+					</a>
+					for _, tag := range data.Tags {
+						if !core.ParseXRestrict(tag.Name).IsNSFWRating() {
+							<a href={ templ.URL("/pixivision/t/" + tag.ID) } class="contents">
+								<div class="blue-link text-sm">
+									#{ tag.Name }
+								</div>
+							</a>
+						}
+					}
+				</div>
+			}
+		</div>
+	</div>
+}

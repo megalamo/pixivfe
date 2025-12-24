@@ -1,0 +1,133 @@
+package fragments
+
+import "fmt"
+
+type TextButtonIcon struct {
+	Name     string
+	IsFilled bool
+}
+
+type TextButtonProps struct {
+	Icon       TextButtonIcon
+	Label      string
+	IsDisabled bool
+	Title      string // A title attribute.
+}
+
+templ LikeTextButton(props LikeData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+	}}
+	<form
+		action={ templ.URL("/self/like/" + props.ID) }
+		method="post"
+		hx-post={ templ.URL("/self/like/" + props.ID) }
+		hx-target="this"
+		hx-swap="outerHTML show:none"
+		hx-push-url="false"
+		hx-indicator="this"
+		class="contents"
+	>
+		<input type="hidden" name="return_path" value={ returnPath }/>
+		<input type="hidden" name="like_count" value={ fmt.Sprint(props.Likes) }/>
+		<input type="hidden" name="render_type" value="text"/>
+		<button type="submit" class="contents">
+			@TextButton(TextButtonProps{
+				Icon:  TextButtonIcon{Name: "thumb_up"},
+				Label: "Like",
+			})
+		</button>
+	</form>
+}
+
+templ UnlikeTextButton() {
+	@TextButton(TextButtonProps{
+		Icon:       TextButtonIcon{Name: "thumb_up", IsFilled: true},
+		Label:      "Liked",
+		IsDisabled: true,
+		Title:      "You can only like a work once a day.",
+	})
+}
+
+templ AddBookmarkTextButton(props AddBookmarkData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+	}}
+	<form
+		action={ templ.URL("/self/addBookmark/" + props.ID) }
+		method="post"
+		hx-post={ templ.URL("/self/addBookmark/" + props.ID) }
+		hx-target="this"
+		hx-swap="outerHTML show:none"
+		hx-push-url="false"
+		hx-indicator="this"
+		class="contents"
+	>
+		<input type="hidden" name="return_path" value={ returnPath }/>
+		<input type="hidden" name="render_type" value="text"/>
+		<button type="submit" class="contents">
+			@TextButton(TextButtonProps{
+				Icon:  TextButtonIcon{Name: "favorite"},
+				Label: "Bookmark",
+			})
+		</button>
+	</form>
+}
+
+templ RemoveBookmarkTextButton(props DeleteBookmarkData) {
+	{{
+		cd := CommonData(ctx)
+
+		var returnPath = cd.CurrentPath
+		if cd.HtmxCurrentPath != "" {
+			returnPath = cd.HtmxCurrentPath
+		}
+	}}
+	<form
+		action={ templ.URL("/self/deleteBookmark/" + props.BookmarkData.ID) }
+		method="post"
+		hx-post={ templ.URL("/self/deleteBookmark/" + props.BookmarkData.ID) }
+		hx-target="this"
+		hx-swap="outerHTML show:none"
+		hx-push-url="false"
+		hx-indicator="this"
+		class="contents"
+	>
+		<input type="hidden" name="return_path" value={ returnPath }/>
+		<input type="hidden" name="render_type" value="text"/>
+		<input type="hidden" name="artwork_id" value={ props.ID }/>
+		<button type="submit" class="contents">
+			@TextButton(TextButtonProps{
+				Icon:  TextButtonIcon{Name: "favorite", IsFilled: true},
+				Label: "Bookmarked",
+			})
+		</button>
+	</form>
+}
+
+templ TextButton(props TextButtonProps) {
+	<button
+		disabled?={ props.IsDisabled }
+		title={ props.Title }
+		class="flex items-center text-sm text-neutral-400 hover:text-neutral-100 font-medium disabled:text-neutral-500 disabled:cursor-not-allowed cursor-pointer gap-1"
+	>
+		if props.Icon.IsFilled {
+			<span class="material-symbols-rounded-fill-16">{ props.Icon.Name }</span>
+		} else {
+			<span class="material-symbols-rounded-16">{ props.Icon.Name }</span>
+		}
+		<span>
+			{ props.Label }
+		</span>
+	</button>
+}

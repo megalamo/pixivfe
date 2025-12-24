@@ -1,0 +1,30 @@
+package fragments
+
+// BreadcrumbItem represents a single item in the breadcrumb navigation.
+type BreadcrumbItem struct {
+	URL   string
+	Label string
+}
+
+// BreadcrumbProps defines the properties for the Breadcrumb component.
+type BreadcrumbProps struct {
+	Items        []BreadcrumbItem
+	CurrentLabel string
+	Classes      string
+}
+
+// Breadcrumb renders a breadcrumb navigation component.
+templ Breadcrumb(props BreadcrumbProps) {
+	<div class={ templ.Classes("flex items-center w-full text-sm gap-2 flex-nowrap", props.Classes) }>
+		for _, item := range props.Items {
+			<a
+				href={ templ.URL(item.URL) }
+				class="shrink-0 text-neutral-400 hover:text-neutral-100 hover:underline decoration-1 underline-offset-3"
+			>
+				{ item.Label }
+			</a>
+			<span class="shrink-0 material-symbols-rounded-20 text-neutral-400 select-none">chevron_right</span>
+		}
+		<span class="text-neutral-100 min-w-0 truncate">{ props.CurrentLabel }</span>
+	</div>
+}

@@ -1,0 +1,74 @@
+package fragments
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+// SocialMediaLinksProps represents the properties for social media links component.
+type SocialMediaLinksProps struct {
+	Social []core.SocialEntry
+	UserID string
+}
+
+// SocialMediaLinks renders social media links.
+templ SocialMediaLinks(props SocialMediaLinksProps) {
+	<div class="flex flex-col gap-6">
+		for _, social := range props.Social {
+			<div class="flex items-center gap-4">
+				<div class="w-6 shrink-0">
+					switch social.Platform {
+						case "pawoo":
+							@templ.Raw(template.RenderIcon("mastodon", ""))
+						case "twitter", "x":
+							@templ.Raw(template.RenderIcon("x_twitter", ""))
+						case "instagram":
+							@templ.Raw(template.RenderIcon("instagram", ""))
+						case "tumblr":
+							@templ.Raw(template.RenderIcon("tumblr", ""))
+						case "facebook":
+							@templ.Raw(template.RenderIcon("facebook", ""))
+						case "circlems":
+							@templ.Raw(template.RenderIcon("circlems-24", ""))
+						case "patreon":
+							@templ.Raw(template.RenderIcon("patreon", ""))
+						case "naver":
+							@templ.Raw(template.RenderIcon("naver-20", ""))
+						case "pixiv":
+							// for pixivision articles
+							@templ.Raw(template.RenderIcon("pixiv", ""))
+						default:
+							<span class="material-symbols-rounded-24">language</span>
+					}
+				</div>
+				<div class="text-sm">
+					<div class="font-medium capitalize">{ social.Platform }</div>
+					<a
+						href={ templ.URL(social.URL) }
+						class="blue-link block text-wrap wrap-anywhere mt-1"
+						rel="noopener"
+					>
+						{ social.URL }
+					</a>
+				</div>
+			</div>
+		}
+		if props.UserID != "" {
+			<div class="flex items-center gap-4">
+				<div class="w-6 shrink-0">
+					@templ.Raw(template.RenderIcon("pixiv", ""))
+				</div>
+				<div class="text-sm">
+					<div class="font-medium">pixiv</div>
+					<a
+						href={ templ.URL("https://pixiv.net/u/" + props.UserID) }
+						class="blue-link block text-wrap wrap-anywhere mt-1"
+						rel="noopener"
+					>
+						{ "https://pixiv.net/u/" + props.UserID }
+					</a>
+				</div>
+			</div>
+		}
+	</div>
+}

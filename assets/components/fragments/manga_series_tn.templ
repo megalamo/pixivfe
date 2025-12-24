@@ -1,0 +1,75 @@
+package fragments
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ MangaSeriesTn(series core.IllustSeries) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		relativeTimeDataCreateDate := template.RelativeTime(series.CreateDate)
+		relativeTimeDataUpdateDate := template.RelativeTime(series.UpdateDate)
+	}}
+	<div class="w-120 max-w-11/12 bg-neutral-800 rounded-t-lg rounded-b-lg">
+		// Thumbnail
+		<a
+			href={ templ.URL("/users/" + series.UserID + "/series/" + series.ID) }
+			class="contents is-artwork"
+			target={ cd.CookieList[cookie.ThumbnailToNewTabCookie] }
+		>
+			<img src={ series.Thumbnail } class="object-cover w-full h-60 rounded-t-lg fade-bottom-soft" alt={ series.Title }/>
+		</a>
+		<div class="flex flex-col">
+			// Title
+			<div class="flex flex-col w-full border-b border-pixivfe-400 gap-2 p-4">
+				<a href={ templ.URL("/users/" + series.UserID + "/series/" + series.ID) }>
+					<div class="w-fit text-lg font-semibold animated-underline line-clamp-1">{ series.Title }</div>
+				</a>
+				<div class="flex items-center text-sm text-neutral-400 fill-neutral-400 gap-1">
+					<span class="material-symbols-rounded-16">collections_bookmark</span>
+					<span class="text-neutral-300 font-semibold">{ template.PrettyNumber(series.Total) }</span>
+					if series.Total == 1 {
+						chapter
+					} else {
+						chapters
+					}
+				</div>
+			</div>
+			<div class="flex rounded-b-lg gap-4 p-4 py-6">
+				<div class="flex flex-col flex-wrap items-start text-xs gap-3">
+					<div class="flex items-center font-medium text-nowrap gap-2" title={ template.NaturalTime(series.UpdateDate) }>
+						<div class="flex items-center gap-1 min-w-18">
+							<span class="material-symbols-rounded-20">history</span>
+							Updated
+						</div>
+						<div>
+							{ relativeTimeDataUpdateDate.Value } { relativeTimeDataUpdateDate.Description }
+							if relativeTimeDataUpdateDate.Time != "" {
+								{ " " + relativeTimeDataUpdateDate.Time }
+							}
+						</div>
+					</div>
+					<div class="flex items-center text-neutral-400 fill-neutral-400 text-nowrap gap-2" title={ template.NaturalTime(series.CreateDate) }>
+						<div class="flex items-center gap-1 min-w-18">
+							<span class="material-symbols-rounded-20">today</span>
+							Created
+						</div>
+						<div>
+							{ relativeTimeDataCreateDate.Value } { relativeTimeDataCreateDate.Description }
+							if relativeTimeDataCreateDate.Time != "" {
+								{ " " + relativeTimeDataCreateDate.Time }
+							}
+						</div>
+					</div>
+				</div>
+				// Read from the beginning button
+				<a href={ templ.URL("/artworks/" + series.FirstIllustID) } class="outlined-button h-fit self-end text-sm font-semibold gap-1 ms-auto">
+					<span class="material-symbols-rounded-20">book_5</span>
+					Read
+				</a>
+			</div>
+		</div>
+	</div>
+}

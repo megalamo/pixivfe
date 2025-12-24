@@ -1,0 +1,25 @@
+package fragments
+
+// Separator renders a horizontal separator line.
+//
+// Supports a custom classes specified as a string.
+templ Separator(classes string) {
+	<div
+		class={ templ.Classes(
+    "col-span-full h-[1px] w-full bg-neutral-800 shrink-0",
+    classes,
+  ) }
+	></div>
+}
+
+// VerticalSeparator renders a vertical separator line.
+//
+// Supports a custom classes specified as a string.
+templ VerticalSeparator(classes string) {
+	<div
+		class={ templ.Classes(
+    "w-[1px] h-full bg-neutral-800 shrink-0",
+    classes,
+  ) }
+	></div>
+}

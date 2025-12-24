@@ -1,0 +1,67 @@
+package fragments
+
+// Select renders a <select> with optional <optgroup>s.
+// - Sentinel values "START_OPTGROUP"/"END_OPTGROUP" delimit groups.
+// - The matching entry in `labels` supplies the optgroup label.
+// - Everything else becomes an <option>; the corresponding label is used.
+// - `activeState` drives the selected? attribute.
+templ Select(
+	name string,
+	values []string,
+	labels []string,
+	activeState string,
+) {
+	<select
+		id={ name }
+		name={ name }
+		class={ "peer/" + name + " w-full form-select" }
+	>
+		{{ var i = 0 }}
+		for i < len(values) {
+			{{ currentValue := values[i] }}
+			// Safely get the label for the current item
+			{{ var currentLabel string }}
+			if i < len(labels) {
+				{{ currentLabel = labels[i] }}
+			} else {
+				{{ currentLabel = "" }} // Default to empty if labels array is too short
+			}
+			if currentValue == "START_OPTGROUP" {
+				// Start of an optgroup, render the whole group
+				<optgroup label={ currentLabel }>
+					{{ i++ }} // Move past "START_OPTGROUP"
+					// Loop for options within this optgroup
+					for i < len(values) && values[i] != "END_OPTGROUP" {
+						{{ var optValue string = values[i] }}
+						{{ var optLabel string }}
+						// Safely get label for the option
+						if i < len(labels) {
+							{{ optLabel = labels[i] }}
+						} else {
+							{{ optLabel = "" }}
+						}
+						// Items here should be actual options, not nested groups or unexpected sentinels
+						<option value={ optValue } selected?={ activeState == optValue }>
+							{ optLabel }
+						</option>
+						{{ i++ }}
+					}
+				</optgroup>
+				// If we stopped due to "END_OPTGROUP", consume it
+				if i < len(values) && values[i] == "END_OPTGROUP" {
+					{{ i++ }}
+				}
+			} else if currentValue == "END_OPTGROUP" {
+				// This is an orphaned "END_OPTGROUP" (e.g., without a preceding "START_OPTGROUP")
+				// We'll just skip it.
+				{{ i++ }}
+			} else {
+				// This is a standalone option
+				<option value={ currentValue } selected?={ activeState == currentValue }>
+					{ currentLabel }
+				</option>
+				{{ i++ }}
+			}
+		}
+	</select>
+}

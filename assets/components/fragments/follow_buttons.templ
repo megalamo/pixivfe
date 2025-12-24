@@ -1,0 +1,129 @@
+package fragments
+
+templ FollowButtons(userID string, isFollowed bool, style string) {
+	{{ cd := CommonData(ctx) }}
+	if isFollowed && cd.LoggedIn {
+		// Unfollow form
+		<form
+			action="/api/follow"
+			method="post"
+			hx-post="/api/follow"
+			hx-target="this"
+			hx-target-4*="body"
+			hx-swap="outerHTML show:none"
+			hx-push-url="false"
+		>
+			<input
+				type="hidden"
+				id={ "unfollowAction-" + userID }
+				name="action"
+				class="hidden"
+				value="unfollow"
+			/>
+			<input
+				type="hidden"
+				id={ "unfollowUserID-" + userID }
+				name="user_id"
+				class="hidden"
+				value={ userID }
+			/>
+			<input
+				type="hidden"
+				id={ "unfollowReturnPath-" + userID }
+				name="return_path"
+				class="hidden"
+				value={ func() string {
+					if cd.HtmxCurrentPath != "" {
+						return cd.HtmxCurrentPath
+					}
+					return cd.CurrentPath
+				}() }
+			/>
+			<button type="submit" class="outlined-button text-sm font-medium gap-2">
+				<span class="material-symbols-rounded-20">person_off</span>
+				<span class="inline">Unfollow</span>
+			</button>
+		</form>
+	} else {
+		// Follow form
+		<form
+			action="/api/follow"
+			method="post"
+			hx-post="/api/follow"
+			hx-target="this"
+			hx-target-4*="body"
+			hx-swap="outerHTML show:none"
+			hx-push-url="false"
+		>
+			<div class="flex items-center group/followPrivacyToggle">
+				<input
+					type="hidden"
+					id={ "followAction-" + userID }
+					name="action"
+					class="hidden"
+					value="follow"
+				/>
+				<input
+					type="hidden"
+					id={ "followUserID-" + userID }
+					name="user_id"
+					class="hidden"
+					value={ userID }
+				/>
+				<input
+					type="checkbox"
+					id={ "followPrivacyToggle-" + userID }
+					name="private"
+					class="hidden"
+				/>
+				<input
+					type="hidden"
+					id={ "followReturnPath-" + userID }
+					name="return_path"
+					class="hidden"
+					value={ func() string {
+						if cd.HtmxCurrentPath != "" {
+							return cd.HtmxCurrentPath
+						}
+						return cd.CurrentPath
+					}() }
+				/>
+				<!-- Follow button -->
+				<button
+					type="submit"
+					class={ templ.Classes(
+						"flex items-center w-fit rounded-s-full select-none text-sm font-medium cursor-pointer transition gap-2 py-2 px-3",
+						templ.KV("bg-transparent border-1 border-neutral-600 hover:border-neutral-500 text-neutral-100 hover:bg-neutral-700 active:bg-neutral-800 transition-all -me-[1px]", style == "outlined"),
+						templ.KV("bg-neutral-100 hover:bg-neutral-300 active:bg-neutral-400 text-neutral-900 fill-neutral-900 me-[1px]", style == "filled"),
+					) }
+				>
+					<span class="material-symbols-rounded-20">person_add</span>
+					<span class="inline">Follow</span>
+				</button>
+				<label
+					for={ "followPrivacyToggle-" + userID }
+					class={ templ.Classes(
+						"flex items-center w-fit rounded-e-full select-none text-sm font-medium cursor-pointer transition gap-2 py-2 px-3",
+						templ.KV("group hover:text-neutral-300 hover:fill-neutral-300 bg-transparent border-1 border-neutral-600 hover:border-neutral-500 text-neutral-400 fill-neutral-400 hover:bg-neutral-700 active:bg-neutral-800 transition-all", style == "outlined"),
+						templ.KV("bg-neutral-100 hover:bg-neutral-300 active:bg-neutral-400 text-neutral-900 fill-neutral-900", style == "filled"),
+					) }
+				>
+					<!-- Public icon -->
+					<span
+						class="material-symbols-rounded-20
+								group-has-[input:checked]/followPrivacyToggle:!hidden !inline"
+					>
+						visibility
+					</span>
+					<!-- Private icon -->
+					<span
+						class="material-symbols-rounded-20
+								group-has-[input:checked]/followPrivacyToggle:!inline !hidden"
+					>
+						visibility_off
+					</span>
+				</label>
+			</div>
+		</form>
+	}
+}
