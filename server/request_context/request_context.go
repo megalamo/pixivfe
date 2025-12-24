@@ -14,9 +14,9 @@ import (
 
 	"golang.org/x/text/language"
 
-	"codeberg.org/pixivfe/pixivfe/v3/core/idgen"
-	"codeberg.org/pixivfe/pixivfe/v3/i18n"
-	"codeberg.org/pixivfe/pixivfe/v3/server/template/commondata"
+	"github.com/megalamo/pixivfe/core/idgen"
+	"github.com/megalamo/pixivfe/i18n"
+	"github.com/megalamo/pixivfe/server/template/commondata"
 )
 
 // RequestContext carries request-scoped data through the middleware chain.
