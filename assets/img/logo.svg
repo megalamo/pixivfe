@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1800"
+   height="300"
+   viewBox="0 0 1800 300"
+   version="1.1"
+   id="svg2"
+   sodipodi:docname="logo.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2">
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter2"
+       x="-0.022307217"
+       y="-0.094505928"
+       width="1.0446144"
+       height="1.1890119">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="1.000000"
+         flood-color="rgb(0,0,0)"
+         id="feFlood1" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="5.000000"
+         id="feGaussianBlur1" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="0.000000"
+         dy="0.000000"
+         id="feOffset1" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite1" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite2" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow"
+       id="filter10"
+       x="-0.013879719"
+       y="-0.056703555"
+       width="1.0277594"
+       height="1.1134071">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="1.000000"
+         flood-color="rgb(0,0,0)"
+         id="feFlood9" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur9" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="0.000000"
+         dy="0.000000"
+         id="feOffset9" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite9" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite10" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.43807474"
+     inkscape:cx="994.1226"
+     inkscape:cy="179.19317"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <g
+     id="g9">
+    <path
+       fill="#7aa2f7"
+       d="m 60,0 h 180 c 33.16408,0 60,26.83593 60,60 v 180 c 0,33.16408 -26.83592,60 -60,60 H 60 C 26.83593,300 0,273.16408 0,240 V 60 C 0,26.83593 26.83593,0 60,0 Z m 0,0"
+       id="path1"
+       style="stroke-width:15" />
+    <path
+       fill="#ffffff"
+       d="m 187.50001,172.5 v 75 H 157.5 v -165 h -30 v 165 h -30 v -75 h -30 v -30 h 30 v -60 h -30 v -30 h 120.00001 c 15.93749,0 31.17186,6.328125 42.42186,17.578122 11.25,11.250003 17.57813,26.484378 17.57813,42.421888 0,15.93749 -6.32813,31.17186 -17.57813,42.42186 -11.25,11.25 -26.48437,17.57813 -42.42186,17.57813 z m 0,0"
+       id="path2"
+       style="stroke-width:15" />
+  </g>
+  <g
+     id="g8"
+     transform="translate(0,1.8400265)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#a3a3a3;fill-opacity:1"
+       x="360"
+       y="258.95996"
+       id="text2"><tspan
+         sodipodi:role="line"
+         id="tspan2"
+         x="360"
+         y="258.95996"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#a3a3a3;fill-opacity:1">An open-source alternative front-end for pixiv.</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:170.667px;line-height:0;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Medium';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;letter-spacing:-3.2px;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#fafafa;fill-opacity:1;filter:url(#filter10)"
+       x="344.1279"
+       y="148.97617"
+       id="text3"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         x="344.1279"
+         y="148.97617"
+         style="line-height:0;letter-spacing:-3.2px">PixivFE</tspan></text>
+  </g>
+</svg>
