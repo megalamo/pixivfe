@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"codeberg.org/pixivfe/pixivfe/v3/config"
-	"codeberg.org/pixivfe/pixivfe/v3/core/untrusted"
-	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+	"github.com/megalamo/pixivfe/config"
+	"github.com/megalamo/pixivfe/core/untrusted"
+	"github.com/megalamo/pixivfe/server/utils"
 )
 
 const (
