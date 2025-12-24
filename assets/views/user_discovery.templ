@@ -1,0 +1,56 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+)
+
+// UserDiscoveryData defines the data used to render the UserDiscovery page.
+type UserDiscoveryData struct {
+	Title string
+	Users []*core.User
+}
+
+templ UserDiscovery(pageData UserDiscoveryData) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full max-w-5xl gap-8">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "Explore",
+				Title:   "Discover users",
+			})
+			@fragments.Separator("-mt-4")
+			// Category and mode
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: "",
+					Entries: []fragments.TabGroupEntry{
+						{Path: "/discovery", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+						{Path: "/discovery/novel", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+						{Path: "/discovery/users", Name: "Users", Icon: `<span class="material-symbols-rounded-20">person</span>`},
+					},
+					ActiveState: cd.CurrentPath},
+				)
+			</div>
+			// Main content
+			<div id="content" class="htmx-added-fade-in">
+				<div class="flex flex-col gap-y-8">
+					for _, user := range pageData.Users {
+						@fragments.UserTn(user)
+					}
+				</div>
+				// Infinite scroll trigger
+				@fragments.InfiniteScrollTrigger()
+			</div>
+			<noscript>
+				<form method="post">
+					<button type="submit" class="filled-button font-medium gap-2 mx-auto">
+						<span class="material-symbols-rounded-20">refresh</span>
+						Refresh
+					</button>
+				</form>
+			</noscript>
+		</div>
+	}
+}

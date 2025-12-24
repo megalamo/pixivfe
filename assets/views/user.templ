@@ -1,0 +1,513 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+templ User(pageData core.UserData) {
+	{{
+		cd := CommonData(ctx)
+		sessionUserID := cd.CookieList[cookie.UserIDCookie]
+
+		bgImage := pageData.User.BackgroundImage
+		if pageData.User.BackgroundImageOriginal != "" {
+			bgImage = pageData.User.BackgroundImageOriginal
+		}
+
+		avatarSrc := pageData.User.Avatar
+		if pageData.User.AvatarOriginal != "" {
+			avatarSrc = pageData.User.AvatarOriginal
+		}
+
+		activeCategory := utils.GetMapParam(cd.Queries, "category", core.UserArtworksCategory)
+
+		isDefaultCategory := activeCategory == core.UserDefaultCategory || activeCategory == core.UserArtworksCategory
+
+		atomTitleAttr := i18n.Tr(ctx, "Atom feed for {{ .user }}", "user", pageData.User.Name)
+		if !isDefaultCategory {
+			atomTitleAttr = i18n.Tr(ctx,
+				"Atom feed for {{ .workType }} by {{ .user }}", "workType", activeCategory, "user", pageData.User.Name,
+			)
+		}
+	}}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full gap-8">
+			// Profile banner
+			if bgImage != "" {
+				<div class="relative h-64 bg-neutral-950 -mx-4 -mt-8">
+					<a href={ templ.URL(bgImage) } class="contents" hx-boost="false">
+						<img
+							src={ bgImage }
+							alt={ i18n.Tr(ctx, "{{ .user }}'s profile banner", "user", pageData.User.Name) }
+							title={ i18n.Tr(ctx, "{{ .user }}'s profile banner", "user", pageData.User.Name) }
+							class="absolute inset-0 size-full object-cover object-[50%_25%]"
+							fetchpriority="high"
+							decoding="async"
+						/>
+					</a>
+				</div>
+			}
+			// Wrapper for main content
+			<div class="flex flex-col w-full max-w-7xl mx-auto gap-8">
+				// Wrapper for header content
+				<div class="flex flex-col sm:flex-row items-start gap-6">
+					// Avatar
+					<a href={ templ.URL(avatarSrc) } class="contents" hx-boost="false">
+						<img
+							src={ pageData.User.Avatar }
+							alt={ pageData.User.Name + "'s avatar" }
+							title={ pageData.User.Name + "'s avatar" }
+							class="size-32 shrink-0 rounded-full object-cover"
+						/>
+					</a>
+					// Wrapper
+					<div class="flex flex-col flex-wrap justify-start w-full gap-6">
+						// Wrapper for name and follow button
+						<div class="flex flex-wrap items-baseline justify-between gap-4">
+							// Name
+							<div class="flex flex-wrap items-center gap-4">
+								<a href={ templ.URL("/users/" + pageData.User.ID) } class="contents">
+									<div class="text-4xl !font-bold text-link-alt tracking-tight">{ pageData.User.Name }</div>
+								</a>
+								<a
+									href={ template.UnfinishedQuery(cd.CurrentPath+"/atom.xml", "category") + activeCategory }
+									class="contents"
+								>
+									<div
+										title={ atomTitleAttr }
+										class="material-symbols-rounded-24 text-neutral-400 hover:text-neutral-100 transition"
+									>
+										rss_feed
+									</div>
+								</a>
+							</div>
+							// Follow button
+							if sessionUserID != pageData.User.ID {
+								<div class="hidden sm:block">
+									@fragments.FollowButtons(pageData.User.ID, pageData.User.IsFollowed, "filled")
+								</div>
+							}
+						</div>
+						// Following
+						@fragments.ChevronLink(fragments.ChevronLinkProps{
+							Href:    template.UnfinishedQuery(cd.CurrentPath, "category") + core.UserFollowingCategory,
+							Classes: "gap-1 -mt-4",
+						}) {
+							<div class="group-hover/local:text-neutral-100 text-neutral-400 transition">
+								<span class="!font-bold text-neutral-100">{ template.PrettyNumber(pageData.User.Following) }</span> following
+							</div>
+						}
+						// // Wrapper for "following" and "MyPixiv"
+						// <div class="flex items-baseline gap-2 text-neutral-400 -mt-4">
+						// 	// "following"
+						// 	<a href={ templ.URL("/users/" + pageData.User.ID + "?category=following#") } class="!font-normal text-link-alt">
+						// 		<span class="!font-bold text-neutral-100">{ template.PrettyNumber(pageData.User.Following) }</span> following
+						// 	</a>
+						// 	<div class="inline-block select-none">|</div>
+						// 	// MyPixiv
+						// 	<div class="inline-block">
+						// 		<span class="font-bold">{ template.PrettyNumber(pageData.User.MyPixiv) }</span> MyPixiv
+						// 	</div>
+						// </div>
+						// User bio
+						<button popovertarget="userProfile" class="tonal-button-neutral text-sm font-medium">
+							View details
+						</button>
+						@fragments.Modal("userProfile", "Profile", "") {
+							<h2 class="font-bold -mb-1">Description</h2>
+							if string(pageData.User.CommentHTML) != "" {
+								<div class="text-neutral-200 text-sm/6 description">
+									@templ.Raw(string(pageData.User.CommentHTML))
+								</div>
+							} else {
+								<div class="text-neutral-500 text-sm italic">
+									No description added
+								</div>
+							}
+							if pageData.User.Region.Name != "" || pageData.User.Region.ParsedPrefecture != "" {
+								<div class="flex items-center text-sm gap-2">
+									<span class="material-symbols-rounded-24">pin_drop</span>
+									<div>
+										if pageData.User.Region.ParsedPrefecture != "" {
+											<span>
+												{ pageData.User.Region.ParsedPrefecture },
+											</span>
+										}
+										if pageData.User.Region.Name != "" {
+											<span>
+												{ pageData.User.Region.Name }
+											</span>
+										}
+									</div>
+								</div>
+							}
+							// Extended details (location, setup etc.)
+							{{
+								effectivePersonalFields := 0
+								for _, field := range pageData.User.PersonalFields {
+									if field.Value != "" {
+										effectivePersonalFields++
+									}
+								}
+								effectiveWorkspaceFields := 0
+								for _, item := range pageData.User.WorkspaceItems {
+									if item.Value != "" {
+										effectiveWorkspaceFields++
+									}
+								}
+							}}
+							if effectivePersonalFields > 0 || effectiveWorkspaceFields > 0 {
+								<hr class="border-neutral-800"/>
+								<h2 class="font-bold -mb-1">Details</h2>
+								if effectivePersonalFields > 0 {
+									<div class="flex flex-col w-full gap-4">
+										for _, field := range pageData.User.PersonalFields {
+											if field.Value != "" {
+												<div class="flex flex-col gap-1">
+													<div class="text-xs text-neutral-400">
+														{ field.Key }
+													</div>
+													<div class="text-sm">
+														{ field.Value }
+													</div>
+												</div>
+											}
+										}
+									</div>
+								}
+								if len(pageData.User.WorkspaceItems) > 0 {
+									<div class="flex flex-col w-full gap-4">
+										for _, item := range pageData.User.WorkspaceItems {
+											if item.Value != "" {
+												<div class="flex flex-col gap-1">
+													<div class="text-xs text-neutral-400">
+														{ item.Key }
+													</div>
+													<div class="text-sm">
+														{ item.Value }
+													</div>
+												</div>
+											}
+										}
+									</div>
+								}
+							}
+							<hr class="border-neutral-800"/>
+							<h2 class="font-bold -mb-1">Socials</h2>
+							@fragments.SocialMediaLinks(fragments.SocialMediaLinksProps{
+								Social: pageData.User.Social,
+								UserID: pageData.User.ID,
+							})
+						}
+						if sessionUserID != pageData.User.ID {
+							<div class="block sm:hidden">
+								@fragments.FollowButtons(pageData.User.ID, pageData.User.IsFollowed, "filled")
+							</div>
+						}
+					</div>
+				</div>
+				@fragments.Separator("")
+				// Navigation
+				<div id="checkpoint" class="scroll-mt-20">
+					{{
+						tabEntries := []fragments.TabGroupEntry{
+							{
+								Path:      core.UserArtworksCategory,
+								Name:      "Home",
+								Icon:      `<span class="material-symbols-rounded-20">home</span>`,
+								IsDefault: true,
+							},
+						}
+
+						// Only add tabs for categories with TotalWorks > 0
+						if pageData.User.IllustrationsCategory != nil && pageData.User.IllustrationsCategory.TotalWorks > 0 {
+							tabEntries = append(tabEntries, fragments.TabGroupEntry{
+								Path: core.UserIllustrationsCategory,
+								Name: "Illustrations",
+								Icon: `<span class="material-symbols-rounded-20">image</span>`,
+							})
+						}
+
+						if pageData.User.MangaCategory != nil && pageData.User.MangaCategory.TotalWorks > 0 {
+							tabEntries = append(tabEntries, fragments.TabGroupEntry{
+								Path: core.UserMangaCategory,
+								Name: "Manga",
+								Icon: `<span class="material-symbols-rounded-20">manga</span>`,
+							})
+						}
+
+						if pageData.User.NovelsCategory != nil && pageData.User.NovelsCategory.TotalWorks > 0 {
+							tabEntries = append(tabEntries, fragments.TabGroupEntry{
+								Path: core.UserNovelsCategory,
+								Name: "Novels",
+								Icon: `<span class="material-symbols-rounded-20">book</span>`,
+							})
+						}
+
+						if pageData.User.BookmarksCategory != nil && pageData.User.BookmarksCategory.TotalWorks > 0 {
+							tabEntries = append(tabEntries, fragments.TabGroupEntry{
+								Path: core.UserBookmarksCategory,
+								Name: "Bookmarks",
+								Icon: `<span class="material-symbols-rounded-20">bookmark</span>`,
+							})
+						}
+
+						// if pageData.User.FollowingCategory != nil && pageData.User.FollowingCategory.TotalWorks > 0 {
+						// 	tabEntries = append(tabEntries, fragments.TabGroupEntry{
+						// 		Path: core.UserFollowingCategory,
+						// 		Name: "Following",
+						// 		Icon: `<span class="material-symbols-rounded-20">group</span>`,
+						// 	})
+						// }
+					}}
+					@fragments.TabGroup(fragments.TabGroupProps{
+						BaseURL:     template.UnfinishedQueryNoPage(cd.CurrentPathWithParams, "category"),
+						Entries:     tabEntries,
+						ActiveState: activeCategory,
+					})
+				</div>
+				// Home category (all works)
+				if activeCategory == core.UserDefaultCategory || activeCategory == core.UserArtworksCategory {
+					{{ isFirstGroup := true }}
+					// Illustrations
+					if illust := pageData.User.IllustrationsCategory; illust != nil && len(illust.IllustWorks) > 0 {
+						if !isFirstGroup {
+							@fragments.Separator("")
+						}
+						@userIllustrationsSection(pageData, true)
+						{{ isFirstGroup = false }}
+					}
+					// Manga
+					if manga := pageData.User.MangaCategory; manga != nil && len(manga.IllustWorks) > 0 {
+						if !isFirstGroup {
+							@fragments.Separator("")
+						}
+						@userMangaSection(pageData, true)
+						{{ isFirstGroup = false }}
+					}
+					// Novels
+					if novels := pageData.User.NovelsCategory; novels != nil && len(novels.NovelWorks) > 0 {
+						if !isFirstGroup {
+							@fragments.Separator("")
+						}
+						@userNovelsSection(pageData, true)
+						{{ isFirstGroup = false }}
+					}
+				}
+				// Illustrations category
+				if activeCategory == core.UserIllustrationsCategory {
+					@userIllustrationsSection(pageData, false)
+				}
+				// Manga category
+				if activeCategory == core.UserMangaCategory {
+					@userMangaSection(pageData, false)
+				}
+				// Novels category
+				if activeCategory == core.UserNovelsCategory {
+					@userNovelsSection(pageData, false)
+				}
+				// Bookmarks category
+				if activeCategory == core.UserBookmarksCategory {
+					@userBookmarksContent(pageData)
+				}
+				// Following category
+				if activeCategory == core.UserFollowingCategory {
+					@userFollowingContent(pageData)
+				}
+				// Pagination
+				if !isDefaultCategory {
+					@fragments.Pagination(fragments.PaginationProps{
+						BaseURL:     template.UnfinishedQuery(cd.CurrentPathWithParams, "page"),
+						EndingURL:   "#checkpoint",
+						CurrentPage: pageData.CurrentPage,
+						MaxPage:     pageData.MaxPage,
+					})
+				}
+			</div>
+		</div>
+	}
+}
+
+// userIllustrationsSection renders the illustrations section with optional "View more" button
+templ userIllustrationsSection(pageData core.UserData, showViewMore bool) {
+	{{ cd := CommonData(ctx) }}
+	if illust := pageData.User.IllustrationsCategory; illust != nil {
+		{{
+			href := ""
+			if utils.GetMapParam(cd.Queries, "category") != core.UserIllustrationsCategory && illust.TotalWorks > 30 {
+				href = "?category=" + core.UserIllustrationsCategory + "&page=2#checkpoint"
+			}
+		}}
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Eyebrow: "Category",
+			Title:   "Illustrations",
+			Badge:   template.PrettyNumber(illust.TotalWorks),
+			Href:    href,
+		})
+		@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+			Items:          fragments.TagsToChipItems(illust.FrequentTags),
+			WrapperClasses: "-mt-4",
+		})
+		<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+			@fragments.ArtworkGrid(illust.IllustWorks)
+		</div>
+		if showViewMore && len(illust.IllustWorks) > 29 {
+			<a href={ templ.URL(href) } class="filled-button font-medium gap-2 mx-auto">
+				<span class="material-symbols-rounded-20">add</span>
+				View more
+			</a>
+		}
+	}
+}
+
+// userMangaSection renders the manga section with optional "View more" button
+templ userMangaSection(pageData core.UserData, showViewMore bool) {
+	{{ cd := CommonData(ctx) }}
+	if manga := pageData.User.MangaCategory; manga != nil {
+		{{
+			href := ""
+			if utils.GetMapParam(cd.Queries, "category") != core.UserMangaCategory && manga.TotalWorks > 30 {
+				href = "?category=" + core.UserMangaCategory + "&page=2#checkpoint"
+			}
+		}}
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Eyebrow: "Category",
+			Title:   "Manga",
+			Badge:   template.PrettyNumber(manga.TotalWorks),
+			Href:    href,
+		})
+		@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+			Items:          fragments.TagsToChipItems(manga.FrequentTags),
+			WrapperClasses: "-mt-4",
+		})
+		if len(manga.MangaSeries) > 0 {
+			<div class="flex flex-nowrap overflow-x-auto gap-4">
+				for _, series := range manga.MangaSeries {
+					@fragments.MangaSeriesTn(series)
+				}
+			</div>
+		}
+		<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+			@fragments.ArtworkGrid(manga.IllustWorks)
+		</div>
+		if showViewMore && len(manga.IllustWorks) > 29 {
+			<a href={ templ.URL(href) } class="filled-button font-medium gap-2 mx-auto">
+				<span class="material-symbols-rounded-20">add</span>
+				View more
+			</a>
+		}
+	}
+}
+
+// userNovelsSection renders the novels section with optional "View more" button
+templ userNovelsSection(pageData core.UserData, showViewMore bool) {
+	{{ cd := CommonData(ctx) }}
+	if novels := pageData.User.NovelsCategory; novels != nil {
+		{{
+			href := ""
+			if utils.GetMapParam(cd.Queries, "category") != core.UserNovelsCategory && novels.TotalWorks > 30 {
+				href = "?category=" + core.UserNovelsCategory + "&page=2#checkpoint"
+			}
+		}}
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Eyebrow: "Category",
+			Title:   "Novels",
+			Badge:   template.PrettyNumber(novels.TotalWorks),
+			Href:    href,
+		})
+		@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+			Items:          fragments.TagsToChipItems(novels.FrequentTags),
+			WrapperClasses: "-mt-4",
+		})
+		if len(novels.NovelSeries) > 0 {
+			<div class="grid grid-flow-col auto-cols-max grid-rows-1 *:snap-start snap-x snap-mandatory overflow-x-scroll fade-right-sharp gap-4 pe-12 lg:pe-24 pb-4">
+				for _, series := range novels.NovelSeries {
+					@fragments.NovelSeriesTn(series)
+				}
+			</div>
+		}
+		@fragments.NovelGrid(fragments.NovelGridProps{Novels: novels.NovelWorks, InSeriesList: true})
+		if showViewMore && len(novels.NovelWorks) > 29 {
+			<a href={ templ.URL(href) } class="filled-button font-medium gap-2 mx-auto">
+				<span class="material-symbols-rounded-20">add</span>
+				View more
+			</a>
+		}
+	}
+}
+
+// userBookmarksContent renders the bookmarks page
+templ userBookmarksContent(pageData core.UserData) {
+	{{ cd := CommonData(ctx) }}
+	if bookmarks := pageData.User.BookmarksCategory; bookmarks != nil {
+		{{
+			href := ""
+			if utils.GetMapParam(cd.Queries, "category") != core.UserBookmarksCategory && bookmarks.TotalWorks > 30 {
+				href = "?category=" + core.UserBookmarksCategory + "&page=2#checkpoint"
+			}
+		}}
+		<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "Category",
+				Title:   "Bookmarks",
+				Badge:   template.PrettyNumber(bookmarks.TotalWorks),
+				Href:    href,
+			})
+			if cd.CookieList[cookie.UserIDCookie] == pageData.User.ID {
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQueryNoPage(cd.CurrentPathWithParams, "mode"),
+					Entries: []fragments.TabGroupEntry{
+						{Name: "Public", Path: "show", Icon: `<span class="material-symbols-rounded-20">visibility</span>`},
+						{Name: "Private", Path: "hide", Icon: `<span class="material-symbols-rounded-20">visibility_off</span>`},
+					},
+					ActiveState: utils.GetMapParam(cd.Queries, "mode", "show"),
+					BaseShade:   "900"})
+			}
+		</div>
+		<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+			@fragments.ArtworkGrid(bookmarks.IllustWorks)
+		</div>
+	}
+}
+
+// userFollowingContent renders the following page
+templ userFollowingContent(pageData core.UserData) {
+	{{ cd := CommonData(ctx) }}
+	if following := pageData.User.FollowingCategory; following != nil {
+		{{
+			href := ""
+			if utils.GetMapParam(cd.Queries, "category") != core.UserFollowingCategory && following.TotalWorks > 30 {
+				href = "?category=" + core.UserFollowingCategory + "&page=2#checkpoint"
+			}
+		}}
+		<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "Category",
+				Title:   "Following",
+				Badge:   template.PrettyNumber(following.TotalWorks),
+				Href:    href,
+			})
+			if cd.CookieList[cookie.UserIDCookie] == pageData.User.ID {
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQueryNoPage(cd.CurrentPathWithParams, "mode"),
+					Entries: []fragments.TabGroupEntry{
+						{Name: "Public", Path: "show", Icon: `<span class="material-symbols-rounded-20">visibility</span>`},
+						{Name: "Private", Path: "hide", Icon: `<span class="material-symbols-rounded-20">visibility_off</span>`},
+					},
+					ActiveState: utils.GetMapParam(cd.Queries, "mode", "show"),
+					BaseShade:   "900"})
+			}
+		</div>
+		<div class="flex flex-col gap-6">
+			for _, user := range following.Users {
+				@fragments.UserTn(user)
+			}
+		</div>
+	}
+}
