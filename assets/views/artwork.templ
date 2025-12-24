@@ -1,0 +1,662 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/partials"
+	"codeberg.org/pixivfe/pixivfe/v3/config"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+	"fmt"
+	"net/url"
+	"strconv"
+)
+
+// Artwork renders both fast-loading and full artwork pages based on request context
+templ Artwork(pageData core.Illust, title string) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(title, false) {
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			@fragments.Breadcrumb(fragments.BreadcrumbProps{
+				Items: []fragments.BreadcrumbItem{
+					{URL: "/discovery", Label: "Artworks"},
+					{URL: "/users/" + pageData.UserID, Label: pageData.UserName},
+				},
+				CurrentLabel: pageData.Title,
+				Classes:      "-mb-2",
+			})
+			if cd.IsFastRequest {
+				// Fast request - lazy load.
+				@fragments.AsyncLoader(fragments.AsyncLoaderProps{
+					BaseURL: "/api/artwork",
+					Params: url.Values{
+						"id":         {pageData.ID},
+						"userid":     {pageData.UserID},
+						"illusttype": {strconv.Itoa(int(pageData.IllustType))},
+						"pages":      {strconv.Itoa(pageData.Pages)},
+						"webpurl":    {pageData.Images[0].MasterWebp_1200},
+					},
+					Trigger:     "load",
+					LoadingText: "Fetching details...",
+				})
+			} else {
+				// All other cases - show full content immediately
+				@ArtworkFullContent(pageData)
+			}
+		</div>
+	}
+}
+
+// ArtworkFullContent renders the complete artwork content
+templ ArtworkFullContent(pageData core.Illust) {
+	{{ cd := CommonData(ctx) }}
+	<div
+		id="tw-artwork"
+		class="htmx-added-in flex flex-col gap-8"
+	>
+		// Show artwork display immediately for fast loading
+		@artworkDisplay(pageData)
+		// Manga series navigation and name
+		if pageData.SeriesNavData.SeriesID != "" {
+			<div class="grid grid-flow-col grid-rows-2 sm:grid-rows-1 auto-cols-fr gap-4 *:!w-full self-center">
+				if pageData.SeriesNavData.Prev.ID != "" {
+					<a
+						href={ templ.URL("/artworks/" + pageData.SeriesNavData.Prev.ID) }
+						class="outlined-button justify-between text-sm font-medium gap-4"
+						hx-headers={ `{ "Artwork-ID": "` + pageData.SeriesNavData.Prev.ID + `", "Artwork-User-ID": "` + pageData.UserID + `", "Artwork-IllustType": "` + fmt.Sprint(pageData.IllustType) + `", "Artwork-Width": "` + strconv.Itoa(pageData.Width) + `", "Artwork-Height": "` + strconv.Itoa(pageData.Height) + `", "Artwork-Pages": "2" }` }
+					>
+						<span class="material-symbols-rounded-20 bg-white text-black rounded-full">arrow_back</span>
+						<div class="line-clamp-1 space-x-2 *:align-baseline mx-auto">
+							<span class="font-semibold text-neutral-400">{ template.OrdinalNumeral(pageData.SeriesNavData.Prev.Order) }</span><span class="font-semibold">{ pageData.SeriesNavData.Prev.Title }</span>
+						</div>
+					</a>
+				}
+				if pageData.SeriesNavData.Next.ID != "" {
+					<a
+						href={ templ.URL("/artworks/" + pageData.SeriesNavData.Next.ID) }
+						class="outlined-button justify-between text-sm font-medium gap-4"
+						hx-headers={ `{ "Artwork-ID": "` + pageData.SeriesNavData.Next.ID + `", "Artwork-User-ID": "` + pageData.UserID + `", "Artwork-IllustType": "` + fmt.Sprint(pageData.IllustType) + `", "Artwork-Width": "` + strconv.Itoa(pageData.Width) + `", "Artwork-Height": "` + strconv.Itoa(pageData.Height) + `", "Artwork-Pages": "2" }` }
+					>
+						<div class="line-clamp-1 space-x-2 *:align-baseline mx-auto">
+							<span class="font-semibold text-neutral-400">{ template.OrdinalNumeral(pageData.SeriesNavData.Next.Order) }</span><span class="font-semibold">{ pageData.SeriesNavData.Next.Title }</span>
+						</div>
+						<span class="material-symbols-rounded-20 bg-white text-black rounded-full">arrow_forward</span>
+					</a>
+				} else {
+					<button
+						disabled
+						class="outlined-button-disabled justify-center text-neutral-500 text-sm font-medium mx-auto"
+						title="Not posted yet"
+					>
+						{{ nextPlaceholder := pageData.SeriesNavData.Prev.Order + 2 }}
+						<div class="line-clamp-1 space-x-2">
+							<span class="font-semibold">{ template.OrdinalNumeral(nextPlaceholder) }</span>
+							<span class="text-neutral-500">Not posted yet</span>
+						</div>
+					</button>
+				}
+			</div>
+		}
+		if pageData.SeriesNavData.SeriesID != "" {
+			<a
+				class="flex items-center text-neutral-400 hover:text-neutral-300 gap-1 w-fit -mb-6"
+				href={ templ.URL("/users/" + pageData.UserID + "/series/" + pageData.SeriesNavData.SeriesID) }
+			>
+				<div class="material-symbols-rounded-20">collections_bookmark</div>
+				<div>
+					<span class="font-bold">{ template.OrdinalNumeral(pageData.SeriesNavData.Order) }</span> of { pageData.SeriesNavData.Title }
+				</div>
+			</a>
+		}
+		<div id="artwork-info" class="text-3xl font-bold tracking-tight -mb-4 scroll-mt-36">
+			{ pageData.Title }
+		</div>
+		// User info and interaction buttons
+		<div class="flex flex-wrap items-start sm:items-center justify-between gap-4">
+			@fragments.AvatarUser(pageData.User, "filled")
+			<div class="flex items-center overflow-x-auto gap-2 pb-2 -mb-2">
+				// Bookmark button
+				if pageData.BookmarkData != nil && cd.LoggedIn {
+					@fragments.DeleteBookmarkPartial(pageData)
+				} else {
+					@fragments.AddBookmarkPartial(pageData)
+				}
+				// Like button
+				if pageData.Liked && cd.LoggedIn {
+					@fragments.UnlikePartial(fragments.UnlikeData{
+						Likes: pageData.Likes,
+					})
+				} else {
+					@fragments.LikePartial(fragments.LikeData{
+						ID:    pageData.ID,
+						Likes: pageData.Likes,
+					})
+				}
+				// Comments button
+				if pageData.CommentOff != 0 {
+					<button
+						disabled
+						class="outlined-button text-sm font-medium gap-2"
+						title="The creator has turned comments off."
+					>
+						<span class="material-symbols-rounded-20">comments_disabled</span>
+					</button>
+				} else {
+					<button popovertarget="comments" class="outlined-button text-sm font-medium gap-2">
+						<span class="material-symbols-rounded-20">comment</span>
+						{ template.PrettyNumber(pageData.Comments) }
+					</button>
+					// Comments section
+					@partials.CommentsModal(partials.CommentsModalProps{
+						IsHtmxRequest: cd.IsHtmxRequest,
+						ArtworkID:     pageData.ID,
+						UserID:        pageData.UserID,
+						SanityLevel:   int(pageData.SanityLevel),
+						CommentsData:  pageData.CommentsData,
+					})
+				}
+				// Download button
+				<button
+					popovertarget="downloadMenu"
+					class="outlined-button text-sm font-medium gap-2"
+				>
+					<span class="material-symbols-rounded-20">download</span>
+					Download
+				</button>
+				// TODO: Fully commit to treating ugoira proxy as a unified content proxy,
+				// and update docs for instance maintainers to encourage running simple-webm-ugoira alongside PixivFE
+				// as a microservice to enable these advanced content capabilities
+				if utils.GetProxyBase(config.Global.ContentProxies.Ugoira) != config.BuiltInUgoiraProxyPath {
+					@fragments.Modal("downloadMenu", "Download", "") {
+						if pageData.IllustType == core.Ugoira {
+							@ugoiraDownload(pageData)
+						} else {
+							@artworkDownload(pageData)
+						}
+					}
+				}
+				// Share button
+				<button
+					popovertarget="sharingMenu"
+					class="outlined-button text-sm font-medium gap-2"
+				>
+					<span class="material-symbols-rounded-20">share</span>
+					Share
+				</button>
+				// Share modal
+				@fragments.Modal("sharingMenu", "Share", "") {
+					<label for="share_permalink" class="form-label -mb-2">Permalink</label>
+					<div class="flex items-center gap-2">
+						<input
+							id="share_permalink"
+							type="text"
+							readonly
+							if cd.HtmxCurrentPath != "" {
+								value={ cd.BaseURL + cd.HtmxCurrentPath }
+							} else {
+								value={ cd.BaseURL + cd.CurrentPath }
+							}
+							class="form-control w-full"
+						/>
+						// FIXME: using hx-on here requires unsafe-eval
+						// <div
+						// 	class="filled-button text-xs font-medium"
+						// 	hx-on:click="navigator.clipboard.writeText(this.previousElementSibling.value); this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy'; }, 3000)"
+						// >
+						// 	Copy
+						// </div>
+					</div>
+					<label for="share_artwork_id" class="form-label -mb-2">Artwork ID</label>
+					<div class="flex items-center gap-2">
+						<input
+							id="share_artwork_id"
+							type="text"
+							readonly
+							value={ pageData.ID }
+							class="form-control w-full"
+						/>
+						// <div
+						// 	class="filled-button text-xs font-medium"
+						// 	hx-on:click="navigator.clipboard.writeText(this.previousElementSibling.value); this.textContent = 'Copied!'; setTimeout(() => { this.textContent = 'Copy'; }, 3000)"
+						// >
+						// 	Copy
+						// </div>
+					</div>
+				}
+			</div>
+		</div>
+		// Metadata, description, and tags
+		{{ relativeTimeData := template.RelativeTime(pageData.Date) }}
+		<div class="flex flex-col rounded-lg w-full bg-neutral-800 border border-neutral-700/60 gap-6 p-5 -mt-4">
+			// Metadata
+			<div class="flex flex-wrap text-sm fill-neutral-400 gap-2">
+				<div class="flex items-center col-span-1 gap-1.5">
+					<div><span class="font-semibold">{ template.PrettyNumber(pageData.Views) }</span> <span class="text-neutral-200">views</span></div>
+				</div>
+				<div class="text-neutral-200 select-none">•</div>
+				<div class="flex items-center col-span-1 gap-1.5" title={ template.NaturalTime(pageData.Date) }>
+					<div>
+						<span class="font-semibold">{ relativeTimeData.Value }</span>
+						<span class="text-neutral-200">{ relativeTimeData.Description }</span>
+						if relativeTimeData.Time != "" {
+							<span class="font-semibold">{ relativeTimeData.Time }</span>
+						}
+					</div>
+				</div>
+			</div>
+			// Description
+			if pageData.Description != "" {
+				if len(pageData.Description) <= 2000 {
+					<div class="description text-wrap wrap-anywhere text-neutral-300 text-base/7">
+						@templ.Raw(pageData.Description)
+					</div>
+				} else {
+					<details class="group/details text-base/7">
+						<summary class="group/summary flex w-fit font-medium text-blue-400 hover:text-blue-300 cursor-pointer select-none">
+							<span class="inline group-open/details:hidden">
+								Read description <span class="text-sm font-normal text-neutral-400 group-hover/summary:text-neutral-300">({ template.PrettyNumber(len(pageData.Description)) } characters)</span>
+							</span>
+							<span class="hidden group-open/details:inline">
+								Hide description
+							</span>
+							<svg class="ml-1 h-6 w-6 text-blue-400 group-hover/summary:text-blue-300 group-open/details:rotate-180 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M6 9l6 6 6-6"></path>
+							</svg>
+						</summary>
+						<div class="description text-wrap wrap-anywhere text-neutral-300 group-open/details:opacity-100 opacity-0 transition mt-2">
+							@templ.Raw(pageData.Description)
+						</div>
+					</details>
+				}
+			} else {
+				<p class="text-neutral-400 text-base/7 italic">
+					No description added
+				</p>
+			}
+		</div>
+		@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+			Items:          fragments.TagsToChipItems(pageData.Tags.Tags),
+			WrapperClasses: "flex-wrap -mt-4",
+			Size:           "compact",
+			AsTags:         true,
+			AIType:         pageData.AIType,
+			IllustType:     &pageData.IllustType,
+			XRestrict:      &pageData.XRestrict,
+		})
+		@fragments.Separator("")
+		// Recent works
+		<div class="flex flex-col gap-4">
+			if cd.IsHtmxRequest {
+				<div
+					id="twArtworkRecentWorks"
+					class="htmx-swapped-out"
+					hx-get={ "/api/recent?type=artwork&userid=" + pageData.UserID + "&recentworkids=" + template.FormatWorkIDs(pageData.RecentWorkIDs) }
+					hx-trigger="revealed"
+					hx-target="this"
+					hx-swap="outerHTML swap:100ms settle:200ms show:none"
+				>
+					@fragments.ArtworkLoadingSkeleton(5)
+				</div>
+			} else {
+				@partials.ArtworkRecentWorks(pageData)
+			}
+		</div>
+		// Related works
+		if cd.IsHtmxRequest {
+			<div
+				id="twArtworkRelatedWorks"
+				class="htmx-swapped-out"
+				hx-get={ "/api/related?type=artwork&id=" + pageData.ID }
+				hx-trigger="revealed"
+				hx-target="this"
+				hx-swap="outerHTML swap:100ms settle:200ms show:none"
+			>
+				@fragments.ArtworkLoadingSkeleton(48)
+			</div>
+		} else {
+			@partials.ArtworkRelatedWorks(pageData)
+		}
+	</div>
+}
+
+// ref: assets/views/fragments/twArtworkDisplay.jet.html
+templ artworkDisplay(illust core.Illust) {
+	{{
+		asPreview := true
+		shouldUseAVIF := config.Global.ContentProxies.Ugoira.Path != config.BuiltInUgoiraProxyPath
+	}}
+	<div class="relative flex justify-center flex-row w-full gap-6">
+		<div id="artwork_images_container" class="flex flex-col items-center w-full bg-neutral-950 rounded gap-4">
+			if illust.IllustType == core.Ugoira {
+				// Ugoira (animated)
+				<a href={ templ.URL(illust.Images[0].Video) } class="contents">
+					<div class={ "relative overflow-hidden size-auto max-w-full", templ.KV("max-h-160", asPreview), templ.KV("max-h-320", !asPreview) }>
+						// The built-in image proxy doesn't support AVIF
+						if shouldUseAVIF {
+							<div id="ugoira-placeholder" class="z-2 absolute inset-0 flex flex-col items-center justify-center bg-black/80">
+								<div class="animate-spin rounded-full size-10 border-4 border-s-white border-white/20 shrink-0"></div>
+								<div class="text-center starting:opacity-0 opacity-100 starting:max-h-0 max-h-6 text-neutral-100 text-sm/6 font-medium mt-4 delay-1500 transition-all duration-300">
+									Loading animation...
+								</div>
+							</div>
+							// Thumbnail
+							<img
+								src={ templ.URL(illust.Images[0].MasterWebp_1200) }
+								class="z-1 size-full"
+								width={ fmt.Sprintf("%d", illust.Images[0].Width) }
+								height={ fmt.Sprintf("%d", illust.Images[0].Height) }
+								data-as_preview={ fmt.Sprintf("%t", asPreview) }
+								fetchpriority="high"
+								decoding="async"
+							/>
+							// Animation
+							//
+							// FIXME: the hx-on::load seems bugged
+							<img
+								src={ templ.URL(illust.Images[0].Video) }
+								class="z-3 absolute inset-0 size-full !bg-transparent"
+								width={ fmt.Sprintf("%d", illust.Images[0].Width) }
+								height={ fmt.Sprintf("%d", illust.Images[0].Height) }
+								data-as_preview={ fmt.Sprintf("%t", asPreview) }
+								fetchpriority="high"
+								decoding="async"
+								hx-on::load="this.previousElementSibling.remove(); htmx.find('#ugoira-placeholder').remove()"
+							/>
+						} else {
+							// Loading placeholder
+							<video
+								src={ templ.URL(illust.Images[0].Video) }
+								controls
+								autoplay
+								loop
+								class="size-full !bg-transparent"
+								data-as_preview={ fmt.Sprintf("%t", asPreview) }
+								hx-on:load="this.previousElementSibling.remove(); htmx.find('#ugoira-placeholder').remove()"
+							></video>
+						}
+					</div>
+				</a>
+			} else {
+				@artworkImageDisplay(illust.Images)
+			}
+		</div>
+		// Only use #thumbnail_nav_wrapper for non-ugoira
+		if illust.IllustType != core.Ugoira  && illust.Pages > 1 {
+			<div
+				id="thumbnail_nav_wrapper"
+				class="sticky border border-neutral-700/60 bg-neutral-800 rounded-lg top-18 w-full max-w-sm h-fit max-h-192 hidden lg:flex flex-col p-4 gap-4"
+			>
+				<div class="flex items-center justify-between gap-4">
+					<div>
+						<div class="text-neutral-400 text-xs mb-1">Navigation</div>
+						<div class="text-neutral-100 font-medium text-balance">{ illust.Title }</div>
+					</div>
+					<a
+						href="#artwork-info"
+						class="outlined-button text-xs font-medium shrink-0"
+						data-no-history
+					>
+						Jump to info
+					</a>
+				</div>
+				@fragments.Separator("!bg-neutral-700/60")
+				<div id="thumbnail_nav" class="grid grid-cols-3 grid-flow-row-dense place-content-start h-full overflow-y-auto rounded gap-2">
+					for i, image := range illust.Images {
+						<a
+							href={ templ.URL("#artwork_image_" + fmt.Sprintf("%d", i+1)) }
+							id={ fmt.Sprintf("thumbnail-link-%d", i+1) }
+							class="group/local block relative size-fit scroll-my-4"
+							data-no-history
+						>
+							<div class="absolute top-1 right-1 flex items-center justify-center text-sm/6 text-neutral-300 bg-black/80 rounded size-fit px-1 z-1">
+								{ fmt.Sprintf("%d/%d", i+1, len(illust.Images)) }
+							</div>
+							<img
+								src={ templ.URL(image.MasterWebp_1200) }
+								class="rounded brightness-60 group-hover/local:brightness-100 transition"
+								width={ fmt.Sprintf("%d", image.Width) }
+								height={ fmt.Sprintf("%d", image.Height) }
+								data-as_preview="true"
+								data-is_manga={ fmt.Sprintf("%t", illust.IllustType == 1) }
+								data-is_landscape={ fmt.Sprintf("%t", image.Width > image.Height) }
+							/>
+						</a>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ artworkImageDisplay(data []core.Thumbnails) {
+	for index, image := range data {
+		{{
+			// seasonalEffectsEnabled := cd.CookieList[string(cookie.SeasonalEffectsEnabledCookie)]
+
+			// Determine image source for manga
+			imgSrc := image.MasterWebp_1200 // Default to MasterWebp_1200
+			if image.Original != "" {
+				imgSrc = image.Original
+			}
+		}}
+		<div class="artwork-image-wrapper">
+			// Wrapper for zoom.js
+			<a
+				href={ templ.URL(image.Original) }
+				class="contents"
+				hx-boost="false"
+			>
+				<div class="relative w-auto max-w-4xl group/art">
+					<div class="absolute top-2 left-2 flex group-hover/art:opacity-0 transition duration-100 items-center gap-4 text-sm/6 bg-black/80 rounded size-fit px-2 py-1 z-1">
+						<div class="flex items-center text-neutral-100 gap-1">
+							<div class="material-symbols-rounded-16">image</div>
+							<div>{ fmt.Sprintf("%d/%d", index+1, len(data)) }</div>
+						</div>
+						// Dimensions
+						<div class="flex items-center text-neutral-300 gap-1">
+							<div class="material-symbols-rounded-16">aspect_ratio</div>
+							<div>{ fmt.Sprintf("%d×%d px", image.Width, image.Height) }</div>
+						</div>
+						// Zoom level
+						<div class="requires-js flex items-center text-neutral-300 gap-1">
+							<div class="material-symbols-rounded-16">zoom_in</div>
+							<div class="zoom-level-display">100%</div>
+						</div>
+					</div>
+					<img
+						id={ fmt.Sprintf("artwork_image_%d", index+1) }
+						src={ templ.URL(imgSrc) }
+						alt={ fmt.Sprintf("Page %d", index+1) }
+						class="artwork-image max-w-full h-auto rounded scroll-mt-18"
+						width={ fmt.Sprintf("%d", image.Width) }
+						height={ fmt.Sprintf("%d", image.Height) }
+						data-is_manga={ fmt.Sprintf("%t", image.IllustType == 1) }
+						data-is_landscape={ fmt.Sprintf("%t", image.Width > image.Height) }
+						if index + 1 == 1 {
+							fetchpriority="high"
+							decoding="async"
+						}
+					/>
+					// TODO
+					// for _, t := range cd.Tags {
+					// 	@SeasonalEffectOverlay(t, seasonalEffectsEnabled)
+					// }
+				</div>
+			</a>
+		</div>
+	}
+}
+
+// TODO: SeasonalEffectOverlay is a helper component to render the seasonal effects images.
+// templ SeasonalEffectOverlay(tag any, seasonalEffectsEnabled string) {
+// 	{{ effects := template.GetSpecialEffects(tag.Name) }}
+// 	if seasonalEffectsEnabled == "true" && effects != "" {
+// 		<img src={ templ.URL(effects) } class="z-2 size-full !bg-transparent absolute inset-0"/>
+// 	}
+// }
+templ artworkTitle(illust core.Illust) {
+	// calc(var(--spacing) * 18) is the actual height of the navbar + padding,
+	// but double it for some breathing room against the top of the viewport, helping with orientation
+	<div class="text-xl font-bold">
+		{ illust.Title }
+	</div>
+}
+
+templ artworkDownload(pageData core.Illust) {
+	{{
+		proxyBase := utils.GetProxyBase(config.Global.ContentProxies.Ugoira)
+		selectedText := i18n.Tr(ctx, "Selected")
+		var imageItems []fragments.SelectableImageGridItem
+		for _, image := range pageData.Images {
+			thumb := image.MasterWebp_1200
+			if thumb == "" {
+				thumb = image.Webp_1200
+			}
+			if thumb == "" {
+				thumb = image.Original
+			}
+			imageItems = append(imageItems, fragments.SelectableImageGridItem{
+				ImageURL: thumb,
+			})
+		}
+	}}
+	<form
+		class="contents group/download-form"
+		action={ templ.URL(proxyBase + "/illust/" + pageData.ID) }
+		method="get"
+		hx-boost="false"
+	>
+		<input type="hidden" name="download" value="true"/>
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Title:     i18n.Tr(ctx, "Image format"),
+			TitleSize: "md",
+		})
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     "Format",
+			InputName: "format",
+			InputType: "radio",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "download-format-original",
+					Value:    "original",
+					Label:    "Original (JPG/PNG)",
+					HelpText: "Use the original files from pixiv.",
+					Checked:  true,
+				},
+				{
+					ID:       "download-format-avif",
+					Value:    "avif",
+					Label:    "AVIF",
+					HelpText: "Smallest file size with excellent quality.",
+				},
+			},
+		})
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Title:     i18n.Tr(ctx, "Additional options"),
+			TitleSize: "md",
+			Classes:   "mt-2",
+		})
+		// TODO: Write JS to ensure that this option is unchecked if the user (re)selects "Original"
+		<div class="group-has-[#download-format-original:checked]/download-form:opacity-60 group-has-[#download-format-original:checked]/download-form:pointer-events-none">
+			@fragments.Fieldset(fragments.FieldsetConfig{
+				InputName: "discord_sticker",
+				InputType: "checkbox",
+				Options: []fragments.FieldsetOption{
+					{
+						ID:       "download-discord-sticker",
+						Value:    "true",
+						Label:    "Use as Discord sticker",
+						HelpText: `Turn images into stickers without Nitro. Post to any channel and favorite as a GIF.<br/>This option is only available when <b>AVIF</b> format is selected.`,
+						// Checked:  true,
+					},
+				},
+			})
+		</div>
+		@fragments.Details("Select images", []string{"By default, all images are selected."}, true) {
+			@fragments.SelectableImageGrid(fragments.SelectableImageGridProps{
+				IDPrefix:       "download_images",
+				InputName:      "images",
+				SelectedText:   selectedText,
+				Items:          imageItems,
+				DefaultChecked: true,
+			})
+		}
+		@fragments.Button(fragments.ButtonProps{
+			Icon:         fragments.ButtonIcon{Name: "download"},
+			Label:        i18n.Tr(ctx, "Download images"),
+			Variant:      fragments.ButtonVariantPrimary,
+			Size:         fragments.ButtonSizeMd,
+			Attrs:        templ.Attributes{"type": "submit"},
+			ExtraClasses: "self-start",
+			IsDisabled:   len(imageItems) == 0,
+		})
+	</form>
+}
+
+templ ugoiraDownload(pageData core.Illust) {
+	// NOTE: the download attribute only works for same-origin URLs,
+	// so the ugoira conversion service should also set Content-Disposition
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "AVIF format",
+		Badge:     "Recommended",
+		TitleSize: "lg",
+	})
+	<div class="text-sm/6 text-neutral-300 -mt-2">
+		A next-gen format. Smallest file sizes with excellent quality.
+	</div>
+	<a
+		href={ templ.URL(pageData.Images[0].Video + "?format=avif&download=true") }
+		rel="noopener"
+		download
+		hx-boost="false"
+		class="filled-button text-sm font-medium gap-2"
+	>
+		<span class="material-symbols-rounded-20">download</span>Download as AVIF
+	</a>
+	@fragments.Separator("")
+	@fragments.Details("Choose another format", nil, false) {
+		<div class="flex flex-col gap-4">
+			<div class="text-sm/6 text-neutral-300 -mt-2">
+				@templ.Raw("<b>WebM</b> creates small files but has limited compatibility outside of web browsers.")
+			</div>
+			<div class="text-sm/6 text-neutral-300 -mt-2">
+				@templ.Raw("<b>WebP</b> offers wide browser support with moderate compression.")
+			</div>
+			<div class="text-sm/6 text-neutral-300 -mt-2">
+				<b>GIF</b> has universal compatibility but creates much larger files.
+			</div>
+			<div class="flex items-center flex-wrap gap-2">
+				// NOTE: the lack of icons for these buttons is intentional
+				<a
+					href={ templ.URL(pageData.Images[0].Video + "?format=webm&download=true") }
+					rel="noopener"
+					download
+					hx-boost="false"
+					class="outlined-button text-xs font-medium"
+				>
+					Download as WebM
+				</a>
+				<a
+					href={ templ.URL(pageData.Images[0].Video + "?format=webp&download=true") }
+					rel="noopener"
+					download
+					hx-boost="false"
+					class="outlined-button text-xs font-medium"
+				>
+					Download as WebP
+				</a>
+				<a
+					href={ templ.URL(pageData.Images[0].Video + "?format=gif&download=true") }
+					rel="noopener"
+					download
+					hx-boost="false"
+					class="outlined-button text-xs font-medium"
+				>
+					Download as GIF
+				</a>
+			</div>
+		</div>
+	}
+}

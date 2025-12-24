@@ -1,0 +1,200 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/config"
+)
+
+const challengeTitle = "Checking your connection security..."
+
+// ChallengePageData holds data specific to the challenge page.
+type ChallengePageData struct {
+	// Method controls which challenge area is rendered.
+	Method config.LimiterDetectionMethod
+
+	Sitekey string
+
+	LinkToken string
+
+	// ReturnPath is a relative URL to redirect to after verification (original resource).
+	ReturnPath string
+}
+
+// ChallengeAreaProps holds the properties for rendering the challenge area.
+type ChallengeAreaProps struct {
+	// Method controls which challenge UI is rendered.
+	Method config.LimiterDetectionMethod
+
+	Sitekey string
+
+	Token string
+
+	// First is the main message, subsequent ones are sub-messages.
+	Messages []string
+
+	IsError bool
+
+	// ReturnPath is a relative URL to redirect to after verification (original resource).
+	ReturnPath string
+}
+
+// Challenge renders the challenge page, including the appropriate challenge area.
+templ Challenge(pageData ChallengePageData) {
+	@layout.Default(challengeTitle, true) {
+		<div class="flex flex-col justify-center h-fit max-w-212 text-sm gap-6">
+			<h1 class="text-2xl font-semibold">Checking your connection security</h1>
+			<p class="text-neutral-200 -mt-2">
+				Please wait a moment.
+			</p>
+		</div>
+		switch pageData.Method {
+			case config.Turnstile:
+				@ChallengeArea(ChallengeAreaProps{
+					Method:  pageData.Method,
+					Sitekey: pageData.Sitekey,
+					Messages: []string{
+						"Verifying your browser...",
+						"Please wait a moment. This process is automatic.",
+					},
+					IsError:    false,
+					ReturnPath: pageData.ReturnPath,
+				})
+			case config.LinkToken:
+				@ChallengeArea(ChallengeAreaProps{
+					Method: pageData.Method,
+					Token:  pageData.LinkToken,
+					Messages: []string{
+						"Verifying your browser...",
+						"Please wait a moment. This process is automatic.",
+					},
+					IsError:    false,
+					ReturnPath: pageData.ReturnPath,
+				})
+		}
+		<script src="/js/challenge.js" defer></script>
+	}
+}
+
+// ChallengeArea renders the challenge area for the challenge page.
+//
+// For Turnstile, success is handled server-side via 303 redirect,
+// so only verifying and error states are rendered.
+//
+// For link token, the browser fetches a client-scoped CSS resource that sets the ping cookie,
+// then we navigate back to the original resource.
+templ ChallengeArea(props ChallengeAreaProps) {
+	{{ isVerifying := !props.IsError }}
+	<div
+		id="challenge-toast"
+		class="fixed bottom-4 right-4 rounded size-fit max-w-11/12 w-fit h-fit bg-neutral-800 border border-neutral-600 z-500 transition-all duration-300 p-3 px-4 gap-2 flex items-start ease-out opacity-100 starting:translate-y-full translate-y-0 starting:opacity-0 starting:blur-sm blur-0"
+	>
+		switch props.Method {
+			case config.Turnstile:
+				// Icons
+				switch  {
+					case isVerifying:
+						<div
+							id="turnstile-spinner"
+							class="animate-spin rounded-full size-5 border-4 border-s-white border-white/20 shrink-0"
+						></div>
+					case props.IsError:
+						<div
+							id="turnstile-error-icon"
+							class="size-5 text-red-300 shrink-0"
+						>
+							<span class="material-symbols-rounded-20">error</span>
+						</div>
+				}
+				// Content
+				<div id="turnstile-content" class="flex flex-col gap-2">
+					if len(props.Messages) > 0 {
+						<div
+							id="turnstile-main-message"
+							class={ templ.Classes(
+								"text-sm/5",
+								templ.KV("text-red-300", props.IsError),
+							) }
+						>{ props.Messages[0] }</div>
+					}
+					if len(props.Messages) > 1 {
+						for _, subMessage := range props.Messages[1:] {
+							<div class="text-xs text-neutral-300">{ subMessage }</div>
+						}
+					}
+					// Verification form and scripts are always present so the user can retry on errors.
+					<form
+						id="turnstile-verify-form"
+						class="hidden"
+						hx-post="/limiter/turnstile/verify"
+						hx-target="body"
+						hx-swap="innerHTML swap:100ms"
+						hx-push-url="true"
+						hx-indicator="this"
+					>
+						// Placeholder for explicit Turnstile rendering.
+						<div
+							id="turnstile-widget-container"
+							data-sitekey={ props.Sitekey }
+							data-size="flexible"
+							data-appearance="interaction-only"
+							data-theme="auto"
+						></div>
+						<input type="hidden" name="return_path" value={ props.ReturnPath }/>
+						// Turnstile automatically adds a hidden input (default name 'cf-turnstile-response')
+						// inside the form when `response-field: true` (default) for `turnstile.render()`.
+					</form>
+					// Load Cloudflare Turnstile API script.
+					// `render=explicit` disables automatic rendering.
+					// `onload=onloadTurnstileCallback` calls our JS function when API is ready.
+					<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback" async defer></script>
+				</div>
+			case config.LinkToken:
+				// Icons
+				switch  {
+					case isVerifying:
+						<div
+							id="link-token-spinner"
+							class="animate-spin rounded-full size-5 border-4 border-s-white border-white/20 shrink-0"
+						></div>
+					case props.IsError:
+						<div
+							id="link-token-error-icon"
+							class="size-5 text-red-300 shrink-0"
+						>
+							<span class="material-symbols-rounded-20">error</span>
+						</div>
+				}
+				// Content
+				<div id="link-token-content" class="flex flex-col gap-2">
+					if len(props.Messages) > 0 {
+						<div
+							id="link-token-main-message"
+							class={ templ.Classes(
+								"text-sm/5",
+								templ.KV("text-red-300", props.IsError),
+							) }
+						>{ props.Messages[0] }</div>
+					}
+					if len(props.Messages) > 1 {
+						for _, subMessage := range props.Messages[1:] {
+							<div class="text-xs text-neutral-300">{ subMessage }</div>
+						}
+					}
+					// Trigger the link token fetch; this will set the ping cookie if successful.
+					if !props.IsError && props.Token != "" {
+						<link
+							id="link-token-stylesheet"
+							rel="stylesheet"
+							href={ templ.URL("/limiter/" + props.Token) }
+							data-return-path={ props.ReturnPath }
+						/>
+					}
+					// Manual fallback link (e.g., JS disabled or CSS load delayed).
+					<div class="text-xs text-neutral-300">
+						If you are not redirected automatically, click
+						<a class="blue-link" href={ templ.URL(props.ReturnPath) }>Continue</a>.
+					</div>
+				</div>
+		}
+	</div>
+}

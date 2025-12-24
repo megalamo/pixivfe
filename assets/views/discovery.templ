@@ -1,0 +1,72 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/partials"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+templ Discovery(pageData core.DiscoveryData) {
+	{{ cd := fragments.CommonData(ctx) }}
+	{{ activeMode := utils.GetMapParam(cd.Queries, "mode", "safe") }}
+	@layout.Default(pageData.Title, false) {
+		// Prefetch links
+		<link rel="prefetch" href={ templ.URL("/discovery?mode=r18") }/>
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "Explore",
+				Title:   "Discover artworks",
+			})
+			@fragments.Separator("-mt-4")
+			// Category and mode
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: "",
+					Entries: []fragments.TabGroupEntry{
+						{Path: "/discovery", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+						{Path: "/discovery/novel", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+						{Path: "/discovery/users", Name: "Users", Icon: `<span class="material-symbols-rounded-20">person</span>`},
+					},
+					ActiveState: cd.CurrentPath},
+				)
+				@fragments.TabGroup(fragments.TabGroupProps{
+					BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "mode"),
+					Entries: []fragments.TabGroupEntry{
+						{Path: "all", Name: "All", Icon: `<span class="material-symbols-rounded-20">public</span>`},
+						{Path: "safe", Name: "Safe", Icon: `<span class="material-symbols-rounded-20">shield</span>`},
+						{Path: "r18", Name: "R-18", Icon: `<span class="material-symbols-rounded-20">warning</span>`},
+					},
+					ActiveState: activeMode,
+					BaseShade:   "900"},
+				)
+			</div>
+			// Main content
+			if cd.IsHtmxRequest {
+				<div
+					id="async-content-placeholder"
+					class="htmx-swapped-out"
+					hx-get={ "/api/discovery?type=artwork&mode=" + activeMode }
+					hx-trigger="load"
+					hx-target="this"
+					hx-swap="outerHTML swap:100ms settle:200ms show:none"
+				>
+					// Loading skeleton
+					@fragments.ArtworkLoadingSkeleton(60)
+				</div>
+			} else {
+				@partials.DiscoveryArtwork(pageData.Artworks, activeMode)
+			}
+			<noscript>
+				<form method="post">
+					<button type="submit" class="filled-button font-medium gap-2 mx-auto">
+						<span class="material-symbols-rounded-20">refresh</span>
+						Refresh
+					</button>
+				</form>
+			</noscript>
+		</div>
+	}
+}
