@@ -1,0 +1,22 @@
+// Copyright 2023 - 2025, VnPower and the PixivFE contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+)
+
+templ Street(pageData core.StreetData) {
+	@layout.Default(pageData.Title, false) {
+		<section class="w-full max-w-2xl sm:border border-neutral-700 rounded-lg flex flex-col">
+			// This wrapper contains the initial loader and all subsequent content chunks.
+			@fragments.AsyncLoader(fragments.AsyncLoaderProps{
+				BaseURL: "/api/street",
+				Trigger: "load",
+			})
+		</section>
+	}
+}

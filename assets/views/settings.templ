@@ -1,0 +1,849 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/partials"
+	"codeberg.org/pixivfe/pixivfe/v3/config"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+	"golang.org/x/text/language/display"
+	"strings"
+)
+
+templ Settings(props core.SettingsPageData) {
+	{{ cd := CommonData(ctx) }}
+	{{ activeCategory := utils.GetMapParam(cd.Queries, "category", "account") }}
+	@layout.Default("Settings", false) {
+		<div
+			class="flex flex-col w-full max-w-3xl text-neutral-300 text-sm/6 gap-8"
+			hx-target="next .form-htmx-target"
+			hx-swap="outerHTML"
+			hx-push-url="false"
+		>
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow:     i18n.Tr(ctx, "You"),
+				Title:       i18n.Tr(ctx, "Settings"),
+				Description: i18n.Tr(ctx, "Personalize your preferences on this PixivFE instance."),
+			})
+			@fragments.Separator("-mt-4")
+			@fragments.TabGroup(fragments.TabGroupProps{
+				BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "category"),
+				Entries: []fragments.TabGroupEntry{
+					{Path: "account", Name: "Account", Icon: `<span class="material-symbols-rounded-20">person</span>`},
+					{Path: "behavior", Name: "Behavior", Icon: `<span class="material-symbols-rounded-20">tune</span>`},
+					{Path: "filter", Name: "Filter", Icon: `<span class="material-symbols-rounded-20">filter_alt</span>`},
+					{Path: "novels", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+					{Path: "language", Name: "Language", Icon: `<span class="material-symbols-rounded-20">language</span>`},
+					{Path: "advanced", Name: "Advanced", Icon: `<span class="material-symbols-rounded-20">bolt</span>`},
+					{Path: "reset", Name: "Reset", Icon: `<span class="material-symbols-rounded-20">reset_wrench</span>`},
+				},
+				ActiveState: activeCategory})
+			<div class="flex flex-col gap-4">
+				if activeCategory == "account" {
+					if !cd.LoggedIn {
+						@settingsAccountLogin()
+					} else {
+						@settingsAccountDetails(props)
+						@fragments.Separator("!bg-neutral-700 my-2")
+						@settingsAccountLogout()
+						@fragments.Separator("!bg-neutral-700 my-2")
+						@settingsAccountLocation(props)
+					}
+				}
+				if activeCategory == "behavior" {
+					@settingsBehaviorImageProxy()
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsBehaviorVisualEffects()
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsBehaviorNewTab()
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsBehaviorLogoStyle()
+					if config.Global.Feature.OpenAllButton {
+						@fragments.Separator("!bg-neutral-700 my-2")
+						@settingsBehaviorOpenAll()
+					}
+				}
+				if activeCategory == "filter" {
+					@settingsContentFilters(props)
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsDefaultSearchMode(props)
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsFilterArtistBlacklist(props)
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsFilterTagBlacklist(props)
+				}
+				if activeCategory == "novels" {
+					@settingsNovelsFontFamily()
+					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsNovelsTextOrientation()
+				}
+				if activeCategory == "language" {
+					@settingsLanguage()
+				}
+				if activeCategory == "advanced" {
+					@settingsAdvanced()
+				}
+				if activeCategory == "reset" {
+					@settingsReset()
+				}
+			</div>
+		</div>
+	}
+}
+
+templ settingsAccountLogin() {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{Title: "Log in", TitleSize: "lg", Classes: "-mb-2"})
+	<p>Signing in with your pixiv account will allow you to access these features:</p>
+	<ul class="list-disc list-inside -mt-2">
+		<li>Personalized results for <span class="font-bold">Discovery</span></li>
+		<li>Fully featured <span class="font-bold">Landing</span></li>
+		<li>
+			<span class="font-bold">Like</span> and <span class="font-bold">bookmark</span> works
+		</li>
+	</ul>
+	<p>
+		To sign in, you'll need your account's <code class="bg-neutral-950">PHPSESSID</code> cookie (your "token"). Username/password sign-in isn't supported for technical reasons.
+	</p>
+	<p>
+		For obtaining your token, refer to <a href="https://pixivfe-docs.pages.dev/hosting/api-authentication/" class="text-link text-neutral-200 hover:text-neutral-100">our documentation</a>.
+	</p>
+	<form id="login_form" action="/settings/token" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "token",
+			InputType: "password",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:          "token",
+					Label:       "Token",
+					Placeholder: "123456_AaBbccDDeeFFggHHIiJjkkllmMnnooPP",
+					HelpText:    "The underscore separates your member ID (left side) from a random string (right side).",
+				},
+			},
+		})
+		<button type="submit" class="filled-button text-sm font-medium">Log in</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsAccountDetails(props core.SettingsPageData) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		username := cd.CookieList[cookie.UsernameCookie]
+		userID := cd.CookieList[cookie.UserIDCookie]
+		userAvatar := cd.CookieList[cookie.UserAvatarCookie]
+	}}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Account details",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>You are currently logged in as:</p>
+	<div class="flex items-center gap-3">
+		<a href={ templ.URL("/users/" + userID) } class="self-start">
+			<img src={ templ.URL(userAvatar) } alt={ username } class="aspect-square object-cover rounded-full size-10 min-w-10 avatar-outline-glow"/>
+		</a>
+		<div class="flex flex-col">
+			<a href={ templ.URL("/users/" + userID) } class="w-fit">
+				<div class="text-lg font-bold text-neutral-200 hover:text-neutral-100 line-clamp-1 animated-underline">
+					{ username }
+				</div>
+			</a>
+			<div class="text-neutral-400 text-sm">
+				User ID: { userID }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				User account: { props.PixivData.UserStatus.UserAccount }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Birth date: { props.PixivData.UserStatus.UserBirth }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Account creation date: { props.PixivData.UserStatus.UserCreateTime }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				User mail address: { props.PixivData.UserStatus.UserMailAddress }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Account location: { props.PixivData.UserStatus.Location }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Is premium: { props.PixivData.UserStatus.UserPremium }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Is illustrator: { props.PixivData.UserStatus.IsIllustCreator }
+			</div>
+			<div class="text-neutral-400 text-sm">
+				Is writer: { props.PixivData.UserStatus.IsNovelCreator }
+			</div>
+		</div>
+	</div>
+}
+
+templ settingsAccountLogout() {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Log out",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Logging out will securely end your session and immediately remove your session token.</p>
+	<form id="logout_form" action="/settings/logout" method="post" class="contents">
+		<button type="submit" class="outlined-danger-button text-red-400 text-sm font-medium">Log out</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsAccountLocation(props core.SettingsPageData) {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Location",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Manage your region settings on pixiv.</p>
+	// <form id="language_form" action="/settings/language" method="post" class="contents">
+	// 	{{
+	// 		langOptions := []fragments.FieldsetOption{
+	// 			{ID: "lang_ja", Label: "日本語", Value: "ja"},
+	// 			{ID: "lang_en", Label: "English", Value: "en"},
+	// 			{ID: "lang_ko", Label: "한국어", Value: "ko"},
+	// 			{ID: "lang_zh_cn", Label: "简体中文", Value: "zh-CN"},
+	// 			{ID: "lang_zh_tw", Label: "繁體中文", Value: "zh-TW"},
+	// 		}
+	// 		for i := range langOptions {
+	// 			if langOptions[i].Value == pixivData.UserStatus.UserLanguage {
+	// 				langOptions[i].Checked = true
+	// 				break
+	// 			}
+	// 		}
+	// 	}}
+	// 	@fragments.Fieldset(fragments.FieldsetConfig{
+	// 		Label:     "Language",
+	// 		InputName: "code",
+	// 		InputType: "select",
+	// 		Options:   langOptions,
+	// 	})
+	// 	<button type="submit" class="outlined-button text-sm font-medium">Save</button>
+	// </form>
+	// <div class="form-htmx-target hidden"></div>
+	<form id="location_form" action="/settings/location" method="post" class="contents mt-6">
+		{{
+			regionList := core.RegionList()
+			locationOptions := make([]fragments.FieldsetOption, len(regionList))
+			for i, region := range regionList {
+				locationOptions[i] = fragments.FieldsetOption{
+					Value:   region[0],
+					Label:   region[1],
+					Checked: region[0] == props.PixivData.UserStatus.Location,
+				}
+			}
+		}}
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     "Country/region",
+			InputName: "location",
+			InputType: "select",
+			Options:   locationOptions,
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">Save</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+// templ settingsReadingProgress(pixivData core.SettingsSelfResponse) {
+// 	@fragments.ContentHeading(fragments.ContentHeadingProps{
+// 		Title:     "Reading progress",
+// 		TitleSize: "lg",
+// 		Classes:   "-mb-2",
+// 	})
+// 	<form id="reading_progress_form" action="/settings/reading_status" method="post" class="contents">
+// 		@fragments.Fieldset(fragments.FieldsetConfig{
+// 			InputName: "optout",
+// 			InputType: "checkbox",
+// 			Options: []fragments.FieldsetOption{
+// 				{
+// 					ID:       "save_read_progress",
+// 					Label:    "Save reading progress",
+// 					Value:    "0", // NOTE: This is intentional, see core/pixivData.UserStatus.go for more details.
+// 					HelpText: `You can save the spot where you last left off reading for each novel. <a href="https://www.pixiv.help/hc/articles/20022046865561" class="blue-link">About reading progress</a>`,
+// 					Checked:  pixivData.UserStatus.ReadingStatusEnabled,
+// 				},
+// 			},
+// 		})
+// 		<button type="submit" class="outlined-button text-sm font-medium">
+// 			Save
+// 		</button>
+// 	</form>
+// 	<div class="form-htmx-target hidden"></div>
+// }
+templ settingsBehaviorImageProxy() {
+	{{ cd := CommonData(ctx) }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Image proxy server",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>PixivFE loads images through a proxy server to protect your privacy. You can choose from either the pre-defined list, or specify a custom URL.</p>
+	<form id="image_proxy_form" action="/settings/image_server" method="post" class="contents">
+		<label for="image_proxy" class="form-label -mb-2">Select an image proxy server</label>
+		{{
+			a := cd.CookieList[cookie.ImageProxyCookie]
+			proxyList := config.BuiltInImageProxyList
+			defaultProxyServer := config.Global.ContentProxies.Image.String()
+			currentProxy := defaultProxyServer
+			if a != "" {
+				currentProxy = a
+			}
+			isCustom := false
+			if a != "" && a != defaultProxyServer && a != "/proxy/i.pximg.net" {
+				isCustom = true
+				for _, p := range proxyList {
+					if p == a {
+						isCustom = false
+						break
+					}
+				}
+			}
+		}}
+		<select class="form-select peer w-84 max-w-full -mb-2" id="image_proxy" name="image_proxy" required>
+			{{ isCurrent := currentProxy == defaultProxyServer }}
+			{{ defaultText := "(default)" }}
+			if isCurrent {
+				{{ defaultText = "(default, current)" }}
+			}
+			<option value={ defaultProxyServer } selected?={ isCurrent }>{ defaultProxyServer } { defaultText }</option>
+			{{ isCurrent = currentProxy == "/proxy/i.pximg.net" }}
+			{{ builtInText := "/proxy/i.pximg.net (built-in)" }}
+			if isCurrent {
+				{{ builtInText = "/proxy/i.pximg.net (built-in, current)" }}
+			}
+			<option value="/proxy/i.pximg.net" selected?={ isCurrent }>{ builtInText }</option>
+			for _, p := range proxyList {
+				{{ isCurrent = currentProxy == p }}
+				{{ proxyText := p }}
+				if isCurrent {
+					{{ proxyText = p + " (current)" }}
+				}
+				<option value={ p } selected?={ isCurrent }>{ proxyText }</option>
+			}
+			{{ customText := "Custom" }}
+			if isCustom {
+				{{ customText = "Custom (current)" }}
+			}
+			<option value="custom" selected?={ isCustom }>{ customText }</option>
+		</select>
+		<div id="image_proxy_help" class="form-text">Image proxy servers.</div>
+		<div class="hidden peer-[&:has(option[value='custom']:checked)]:contents">
+			<label for="custom_image_proxy" class="form-label -mb-2">Custom image proxy server</label>
+			{{ customValue := "" }}
+			if isCustom {
+				{{ customValue = a }}
+			}
+			<input type="text" class="form-control w-84 max-w-full -mb-2" id="custom_image_proxy" name="custom_image_proxy" placeholder="https://example.com" autocomplete="off" value={ customValue }/>
+			<div id="custom_image_proxy_help" class="form-text">
+				Enter a custom proxy server URL.
+			</div>
+		</div>
+		<button type="submit" class="outlined-button text-sm font-medium">Save</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsBehaviorVisualEffects() {
+	{{ cd := CommonData(ctx) }}
+	{{ seasonalEffectsEnabled := cd.CookieList[cookie.SeasonalEffectsEnabledCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Visual effects",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Configure visual effects used in the user interface.</p>
+	<form id="visual_effects_form" action="/settings/visual_effects" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "seasonal_effects",
+			InputType: "checkbox",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "seasonal_effects",
+					Label:    "Enable seasonal effects",
+					Value:    "seasonal-effects",
+					HelpText: "Choose whether seasonal effects should be shown for artworks with special tags (ex. #pixivSakuraEffect).",
+					Checked:  seasonalEffectsEnabled == "true",
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsBehaviorNewTab() {
+	{{ cd := CommonData(ctx) }}
+	{{ ttntValue := cd.CookieList[cookie.ThumbnailToNewTabCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Open artworks in new tab",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Choose whether clicking on artwork thumbnails opens the full artwork in the same tab or a new tab.</p>
+	<form id="ttnt_form" action="/settings/thumbnail_to_new_tab" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "ttnt",
+			InputType: "checkbox",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "ttnt_switch",
+					Label:    "Open in new tab",
+					Value:    "_blank",
+					HelpText: "When enabled, clicking on artwork thumbnails will open the full artwork in a new browser tab.",
+					Checked:  ttntValue == "_blank",
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsBehaviorLogoStyle() {
+	{{ cd := CommonData(ctx) }}
+	{{ logoStyleValue := cd.CookieList[cookie.LogoStyleCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Logo style",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Choose between the standard PixivFE logo or an alternative design created by @dragongoose as a fun variation.</p>
+	<form id="logo_style_form" action="/settings/set_cookie" method="post" class="contents">
+		<input type="hidden" name="key" value={ string(cookie.LogoStyleCookie) }/>
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     "Logo style",
+			InputName: "value",
+			InputType: "select",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:      "logo_standard",
+					Label:   "Standard",
+					Value:   "standard",
+					Checked: logoStyleValue == "standard" || logoStyleValue == "",
+					Default: true,
+				},
+				{
+					ID:      "logo_alternative",
+					Label:   "Alternative",
+					Value:   "alternative",
+					Checked: logoStyleValue == "alternative",
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsBehaviorOpenAll() {
+	{{ cd := CommonData(ctx) }}
+	<div class={ templ.Classes("flex flex-col gap-4", templ.KV("opacity-60", !cd.LoggedIn)) }>
+		@fragments.ContentHeading(fragments.ContentHeadingProps{
+			Title: `Open all art in this section`,
+		})
+		<p>Show an "Open All" button in some places.</p>
+		<p>If you use Firefox, increase <code>dom.popup_maximum</code> in <a href="about:config">about:config</a> { "if" } you want this to work properly.</p>
+		<form action="/settings/set_cookie" method="post" class="contents">
+			<input type="hidden" name="key" value={ string(cookie.OpenAllButtonCookie) }/>
+			@fragments.Fieldset(fragments.FieldsetConfig{
+				InputName: "value",
+				InputType: "select",
+				Disabled:  !cd.LoggedIn,
+				Options: []fragments.FieldsetOption{
+					{
+						ID:      "openall_disable",
+						Label:   "Disable",
+						Value:   "",
+						Checked: string(cookie.OpenAllButtonCookie) == "",
+						Default: true,
+					},
+					{
+						ID:      "openall_enable",
+						Label:   "Cry me a river",
+						Value:   "true",
+						Checked: string(cookie.OpenAllButtonCookie) == "true",
+					},
+				},
+			})
+			<button
+				type="submit"
+				class="outlined-button text-sm font-medium"
+				if !cd.LoggedIn {
+					disabled
+				}
+			>
+				Save
+			</button>
+		</form>
+		<div class="form-htmx-target hidden"></div>
+	</div>
+	if cd.LoggedIn {
+		@partials.Alert(
+			partials.AlertProps{
+				Message:     "<div>Using this feature will eat pixiv API requests on your account like no tomorrow. <b>You have been warned.</b></div>",
+				Level:       "warning",
+				Dismissible: false,
+			},
+		)
+	} else {
+		@partials.Alert(
+			partials.AlertProps{
+				Message:     "You need to be logged in to use this feature.",
+				Level:       "warning",
+				Dismissible: false,
+			},
+		)
+	}
+}
+
+templ settingsContentFilters(props core.SettingsPageData) {
+	{{
+		fp := props.FilterProfile
+		pixivLevel := core.ComputePixivLevel(&props.PixivData)
+		effectiveLevel := core.ComputeEffectiveLevel(fp, &props.PixivData)
+	}}
+	<div class="p-4 border rounded-md border-neutral-700 bg-neutral-800 text-neutral-300 text-sm/7">
+		<div class="text-neutral-100 font-bold mb-1 text-base/8">{ i18n.Tr(ctx, "Preferences summary") }</div>
+		<p>
+			{ i18n.Tr(ctx, "Based on your combined settings, you can currently view:") }
+			<span class="font-medium text-neutral-100">{ i18n.Tr(ctx, effectiveLevel.String()) }</span>
+		</p>
+		if props.PixivData.UserStatus.IsLoggedIn {
+			<p>
+				{ i18n.Tr(ctx, "Your pixiv.net account is set to:") }
+				<span class="text-neutral-100">{ i18n.Tr(ctx, pixivLevel.String()) }</span>.
+			</p>
+			if props.PixivData.UserStatus.HideAIWorks {
+				<p>
+					{ i18n.Tr(ctx, "Your pixiv.net account hides AI-generated works, AI will be hidden regardless of the local setting.") }
+				</p>
+			}
+		}
+	</div>
+	@fragments.Separator("!bg-neutral-700 my-2")
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     i18n.Tr(ctx, "Content filters"),
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>
+		{ i18n.Tr(ctx, "Your content view is determined by a combination of your pixiv account settings and the local settings on this site. Local settings can only be more restrictive than your pixiv account, not less.") }
+	</p>
+	<form id="content_filters_form" action="/settings/content_filters" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     i18n.Tr(ctx, core.LabelKeyR15),
+			InputName: core.FormR15,
+			InputType: "radio",
+			Layout:    "horizontal",
+			Options: []fragments.FieldsetOption{
+				{ID: core.FormR15 + "_show", Label: i18n.Tr(ctx, "Show"), Value: "show", Checked: fp.R15 == core.FilterShow},
+				{ID: core.FormR15 + "_censor", Label: i18n.Tr(ctx, "Censor"), Value: "censor", Checked: fp.R15 == core.FilterCensor},
+				{ID: core.FormR15 + "_hide", Label: i18n.Tr(ctx, "Hide"), Value: "hide", Checked: fp.R15 == core.FilterHide},
+			},
+		})
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     i18n.Tr(ctx, core.LabelKeyR18),
+			InputName: core.FormR18,
+			InputType: "radio",
+			Layout:    "horizontal",
+			Options: []fragments.FieldsetOption{
+				{ID: core.FormR18 + "_show", Label: i18n.Tr(ctx, "Show"), Value: "show", Checked: fp.R18 == core.FilterShow},
+				{ID: core.FormR18 + "_censor", Label: i18n.Tr(ctx, "Censor"), Value: "censor", Checked: fp.R18 == core.FilterCensor},
+				{ID: core.FormR18 + "_hide", Label: i18n.Tr(ctx, "Hide"), Value: "hide", Checked: fp.R18 == core.FilterHide},
+			},
+		})
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     i18n.Tr(ctx, core.LabelKeyR18G),
+			InputName: core.FormR18G,
+			InputType: "radio",
+			Layout:    "horizontal",
+			Options: []fragments.FieldsetOption{
+				{ID: core.FormR18G + "_show", Label: i18n.Tr(ctx, "Show"), Value: "show", Checked: fp.R18G == core.FilterShow},
+				{ID: core.FormR18G + "_censor", Label: i18n.Tr(ctx, "Censor"), Value: "censor", Checked: fp.R18G == core.FilterCensor},
+				{ID: core.FormR18G + "_hide", Label: i18n.Tr(ctx, "Hide"), Value: "hide", Checked: fp.R18G == core.FilterHide},
+			},
+		})
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			Label:     i18n.Tr(ctx, core.LabelKeyAI),
+			InputName: core.FormAI,
+			InputType: "radio",
+			Layout:    "horizontal",
+			Options: []fragments.FieldsetOption{
+				{ID: core.FormAI + "_show", Label: i18n.Tr(ctx, "Show"), Value: "show", Checked: fp.AI == core.FilterShow},
+				{ID: core.FormAI + "_censor", Label: i18n.Tr(ctx, "Censor"), Value: "censor", Checked: fp.AI == core.FilterCensor},
+				{ID: core.FormAI + "_hide", Label: i18n.Tr(ctx, "Hide"), Value: "hide", Checked: fp.AI == core.FilterHide},
+			},
+		})
+		if props.PixivData.UserStatus.IsLoggedIn {
+			@fragments.Fieldset(fragments.FieldsetConfig{
+				InputName:    "sync_to_pixiv",
+				InputType:    "checkbox",
+				ExtraClasses: "mt-4",
+				Options: []fragments.FieldsetOption{{
+					ID:       "sync_to_pixiv_check",
+					Label:    i18n.Tr(ctx, "Apply these settings to your pixiv account (recommended)"),
+					Value:    "1",
+					Checked:  true,
+					HelpText: i18n.Tr(ctx, "Update your pixiv account to match the visibility settings chosen above."),
+				}},
+			})
+		}
+		<button type="submit" class="outlined-button text-sm font-medium mt-4">{ i18n.Tr(ctx, "Save") }</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsDefaultSearchMode(props core.SettingsPageData) {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Default search mode",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Control which of All / Safe / R18 is selected by default when starting a new search. It also affects the Discovery page and the Following page.</p>
+	<form action="/settings/default_search_mode" method="post" hx-post="/settings/default_search_mode" hx-target="next .form-htmx-target" hx-swap="innerHTML">
+		<select name="default_search_mode" class="form-control" onchange="this.form.requestSubmit()">
+			<option value="" selected?={ props.FilterProfile.DefaultSearchMode == "" }>Site default</option>
+			<option value={ core.SearchFilterModeAll } selected?={ props.FilterProfile.DefaultSearchMode == core.SearchFilterModeAll }>All</option>
+			<option value={ core.SearchFilterModeSafe } selected?={ props.FilterProfile.DefaultSearchMode == core.SearchFilterModeSafe }>Safe</option>
+			<option value={ core.SearchFilterModeR18 } selected?={ props.FilterProfile.DefaultSearchMode == core.SearchFilterModeR18 }>R18</option>
+		</select>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsFilterArtistBlacklist(props core.SettingsPageData) {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Artist blacklist",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>{ `Hide works by the listed artists. Enter one user ID (integer) per line. You can find the user ID in the URL on any user page, for example: /users/<id>.` }</p>
+	<form id="artist_blacklist_form" action="/settings/blacklisted_artists" method="post" class="contents">
+		<textarea name="artists" class="form-control font-mono" rows="10" spellcheck="false">
+			{ strings.Join(props.FilterProfile.BlacklistedArtists, "\n") }
+		</textarea>
+		<button type="submit" class="outlined-button text-sm font-medium">Save</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsFilterTagBlacklist(props core.SettingsPageData) {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Tag blacklist",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Hide works that have any of the listed tags. Enter one tag per line, using the original (non-translated) tag names. All tags are automatically converted to lowercase.</p>
+	@fragments.Details("Known AI tags", []string{"Useful for filtering out AI-generated content that has incorrect metadata."}, false) {
+		@fragments.CodeBlockNoHeader() {
+			for _, tag := range core.KnownAITags {
+				{ tag + "\n" }
+			}
+		}
+	}
+	<form id="tag_blacklist_form" action="/settings/blacklisted_tags" method="post" class="contents">
+		<textarea name="tags" class="form-control font-mono" rows="10" spellcheck="false">
+			{ strings.Join(props.FilterProfile.BlacklistedTags, "\n") }
+		</textarea>
+		<button type="submit" class="outlined-button text-sm font-medium">Save</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsNovelsFontFamily() {
+	{{ cd := CommonData(ctx) }}
+	{{ novelFontTypeValue := cd.CookieList[cookie.NovelFontTypeCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Font family",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Choose the font style for displaying novels. Affects the readability and aesthetic of the text.</p>
+	<form id="novel_font_form" action="/settings/novel_font_type" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "font_type",
+			InputType: "radio",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "font_type_mincho",
+					Label:    "Mincho",
+					Value:    core.NovelFontTypeMincho,
+					HelpText: "A serif font style that resembles traditional Japanese printing. Often used for formal or literary content, it provides a classic and elegant look.",
+					Checked:  novelFontTypeValue == core.NovelFontTypeMincho,
+				},
+				{
+					ID:       "font_type_gothic",
+					Label:    "Gothic",
+					Value:    core.NovelFontTypeGothic,
+					HelpText: "A sans-serif font style that's clean and modern. Often used for easy readability on digital screens, it offers a contemporary appearance.",
+					Checked:  novelFontTypeValue == core.NovelFontTypeGothic || novelFontTypeValue == "",
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+	@fragments.Details("Typeface samples", []string{"See each typeface looks in practice."}, false) {
+		<div class="flex flex-col md:flex-row gap-4">
+			<div class="flex flex-col w-full md:w-1/2 gap-2">
+				<h3 class="font-medium text-neutral-100">Mincho</h3>
+				<p class="font-serif">
+					吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。
+				</p>
+			</div>
+			<div class="flex flex-col w-full md:w-1/2 gap-2">
+				<h3 class="font-medium text-neutral-100">Gothic</h3>
+				<p class="font-sans">
+					吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。
+				</p>
+			</div>
+		</div>
+	}
+}
+
+templ settingsNovelsTextOrientation() {
+	{{ cd := CommonData(ctx) }}
+	{{ novelViewModeValue := cd.CookieList[cookie.NovelViewModeCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Text orientation",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Set the text orientation for novels.</p>
+	<form id="novel_orientation_form" action="/settings/novel_view_mode" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "view_mode",
+			InputType: "radio",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "horizontal",
+					Label:    "Horizontal",
+					Value:    core.NovelViewModeHorizontal,
+					HelpText: "Forces the text to be displayed horizontally, left-to-right. Common for most languages, and better suited for smaller screens or those more accustomed to Western text layouts.",
+					Checked:  novelViewModeValue == core.NovelViewModeHorizontal,
+				},
+				{
+					ID:       "vertical",
+					Label:    "Vertical",
+					Value:    core.NovelViewModeVertical,
+					HelpText: "Forces the text to be displayed vertically, top-to-bottom and right-to-left. Traditional for some East Asian languages and provides a unique reading experience, especially for longer texts.",
+					Checked:  novelViewModeValue == core.NovelViewModeVertical,
+				},
+				{
+					ID:       "none",
+					Label:    "Don't force",
+					Value:    core.NovelViewModeNone,
+					HelpText: "Uses the original text orientation as set by the author. Respects the intended layout of the novel.",
+					Checked:  novelViewModeValue == core.NovelViewModeNone,
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsLanguage() {
+	{{ cd := CommonData(ctx) }}
+	{{ currentLang := cd.CookieList[cookie.LangCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     i18n.Tr(ctx, "Display language"),
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>{ i18n.Tr(ctx, "Select your preferred display language from the dropdown menu below. Note that in the case of a missing translation, English will be used instead.") }</p>
+	<form id="locale_form" action="/settings/set_cookie" method="post" class="contents">
+		<input type="hidden" name="key" value={ string(cookie.LangCookie) }/>
+		{{
+			languageOptions := make([]fragments.FieldsetOption, 1, len(i18n.Languages())+1)
+			languageOptions[0] = fragments.FieldsetOption{
+				ID:         "lang_" + "",
+				Label:      i18n.Tr(ctx, "Use browser language"),
+				Value:      "",
+				Checked:    currentLang == "",
+				Default:    true,
+				WidthClass: "w-fit max-w-full",
+			}
+			englishNamer := display.English.Tags()
+			for _, lang := range i18n.Languages() {
+				code := lang.String()
+				name := englishNamer.Name(lang)
+				if name == "" {
+					name = code
+				}
+				languageOptions = append(languageOptions, fragments.FieldsetOption{
+					ID:      "lang_" + code,
+					Label:   name,
+					Value:   code,
+					Checked: currentLang == code,
+				})
+			}
+			languageConfig := fragments.FieldsetConfig{
+				Label:     i18n.Tr(ctx, "Display language"),
+				InputName: "value",
+				InputType: "select",
+				Options:   languageOptions,
+			}
+		}}
+		@fragments.Fieldset(languageConfig)
+		<button type="submit" class="outlined-button text-sm font-medium">
+			{ i18n.Tr(ctx, "Save") }
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsAdvanced() {
+	{{ cd := CommonData(ctx) }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Raw settings",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>View all of your current cookie values in a raw format. You can copy these settings to quickly configure your preferences on another PixivFE instance, or make bulk changes to multiple preferences at once. When importing settings, any invalid or unrecognized values will be ignored to prevent configuration errors.</p>
+	<!-- Save raw settings -->
+	<form id="raw_settings_form" action="/settings/raw" method="post" class="contents">
+		<!-- NOTE: do not modify this <textarea> - weird whitespace will appear -->
+		<textarea class="form-control font-mono" name="raw" rows="22" spellcheck="false">
+			for _, cookie := range cd.CookieListOrdered {
+				{ string(cookie.K) + "=" + cookie.V + "\n" }
+			}
+		</textarea>
+		<button type="submit" class="outlined-button text-sm font-medium -mb-2">Set raw settings</button>
+		<div id="set_raw_settings_help" class="form-text">Applies the raw settings entered above. This action will overwrite your current configuration with the provided values.</div>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
+templ settingsReset() {
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Reset all preferences",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>You can reset all cookies and use PixivFE's default preferences instead.</p>
+	<form id="reset_all_form" action="/settings/reset_all" method="post" class="contents">
+		<button type="submit" class="outlined-danger-button text-red-400 text-sm font-medium -mb-2">Reset all preferences</button>
+		<div id="reset_all_help" class="form-text">
+			This action will reset all your preferences to default values. It cannot be undone.
+		</div>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}

@@ -1,0 +1,226 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+)
+
+templ Ranking(pageData core.RankingData) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		var nextDateURL, prevDateURL string
+		commonParams := "&page=1&content=" + pageData.Content
+
+		if pageData.Mode == "original" || pageData.Mode == "male" || pageData.Mode == "female" || pageData.Mode == "" {
+			if pageData.NextDate != "false" {
+				nextDateURL = "/ranking?date=" + pageData.NextDate + commonParams
+			}
+			if pageData.PrevDate != "false" {
+				prevDateURL = "/ranking?date=" + pageData.PrevDate + commonParams
+			}
+		} else {
+			if pageData.NextDate != "false" {
+				nextDateURL = "/ranking?mode=daily&date=" + pageData.NextDate + commonParams
+			}
+			if pageData.PrevDate != "false" {
+				prevDateURL = "/ranking?mode=daily&date=" + pageData.PrevDate + commonParams
+			}
+		}
+
+		var navBaseURL string
+		if pageData.Mode == "original" || pageData.Mode == "male" || pageData.Mode == "female" || pageData.Mode == "" {
+			navBaseURL = "/ranking?date=" + pageData.CurrentDate + "&page=1&content="
+		} else {
+			navBaseURL = "/ranking?mode=daily&date=" + pageData.CurrentDate + "&page=1&content="
+		}
+	}}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			<button popovertarget="rankingOptions" class="group/local cursor-pointer flex w-fit items-start gap-2">
+				@fragments.ContentHeading(fragments.ContentHeadingProps{
+					// Eyebrow:     "Discover",
+					Title:       pageData.Title,
+					Description: "For " + pageData.CurrentDate,
+				})
+				// FIXME: using a margin hack for alignment
+				<div class="text-neutral-400 group-hover/local:text-neutral-100 group-hover/local:translate-x-1/12 transition material-symbols-rounded-24 mt-1">chevron_right</div>
+			</button>
+			// <button popovertarget="rankingOptions" class="outlined-button text-sm font-medium gap-2">
+			// 	<span class="material-symbols-rounded-20">tune</span>Options
+			// </button>
+			@fragments.Modal("rankingOptions", "Options", "w-full max-w-11/12 md:max-w-96") {
+				<form action={ templ.URL("/ranking") } method="get">
+					<div class="flex flex-col h-fit gap-6">
+						<h3 class="text-neutral-300 text-sm font-medium">Filter by</h3>
+						<div class="flex justify-start gap-16 -mt-4">
+							{{
+								selectName := "mode"
+								var selectValues, selectLabels []string
+
+								if pageData.Content == "all" {
+									selectValues = []string{
+										"START_OPTGROUP", "daily", "weekly", "monthly", "rookie",
+										"START_OPTGROUP", "daily_r18", "weekly_r18", "r18g",
+										"START_OPTGROUP", "original", "daily_ai", "male", "female",
+										"START_OPTGROUP", "daily_r18_ai", "male_r18", "female_r18",
+									}
+									selectLabels = []string{
+										"Time frame", "Daily", "Weekly", "Monthly", "Rookie",
+										"Time frame (R-18)", "Daily (R-18)", "Weekly (R-18)", "Weekly (R-18G)",
+										"Specialized", "Original", "AI-generated", "Popular among males", "Popular among females",
+										"Specialized (R-18)", "AI-generated (R-18)", "Popular among males (R-18)", "Popular among females (R-18)",
+									}
+								} else if pageData.Content != "ugoira" {
+									selectValues = []string{"daily", "weekly", "monthly", "rookie", "daily_r18", "weekly_r18", "r18g"}
+									selectLabels = []string{"Daily", "Weekly", "Monthly", "Rookie", "Daily (R-18)", "Weekly (R-18)", "Weekly (R-18G)"}
+								} else {
+									selectValues = []string{"daily", "weekly", "daily_r18", "weekly_r18", "r18g"}
+									selectLabels = []string{"Daily", "Weekly", "Daily (R-18)", "Weekly (R-18)", "Weekly (R-18G)"}
+								}
+							}}
+							@fragments.Select(selectName, selectValues, selectLabels, pageData.Mode)
+						</div>
+						<p class="text-xs text-neutral-400 text-nowrap -mt-4">
+							Works are ranked using a sliding window.
+						</p>
+						<h3 class="text-neutral-300 text-sm font-medium">Date</h3>
+						<div class="flex items-center gap-3 -mt-4">
+							<input
+								id="date"
+								name="date"
+								type="date"
+								value={ pageData.CurrentDate }
+								min="2007-09-13"
+								class="form-control"
+							/>
+						</div>
+						<input type="hidden" name="content" value={ pageData.Content }/>
+						<div class="flex items-center justify-between gap-8">
+							<a href={ templ.URL("/ranking") } type="button" class="flex items-center w-fit cursor-pointer hover:bg-red-500/10 rounded-full text-red-300 fill-red-300 transition gap-2 px-3 py-2">
+								<span class="material-symbols-rounded-20">reset_wrench</span>
+								Reset
+							</a>
+							<button type="submit" class="filled-button font-medium gap-2">
+								<span class="material-symbols-rounded-20">arrow_forward</span>
+								Go
+							</button>
+						</div>
+					</div>
+				</form>
+			}
+			@fragments.Separator("-mt-4")
+			@fragments.TabGroup(fragments.TabGroupProps{
+				BaseURL: navBaseURL,
+				Entries: []fragments.TabGroupEntry{
+					{Path: "all", Name: "Overall", Icon: `<span class="material-symbols-rounded-20">home</span>`},
+					{Path: "illust", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+					{Path: "ugoira", Name: "Ugoira", Icon: `<span class="material-symbols-rounded-20">slideshow</span>`},
+					{Path: "manga", Name: "Manga", Icon: `<span class="material-symbols-rounded-20">manga</span>`},
+				},
+				ActiveState: pageData.Content})
+			<div id="checkpoint" class="scroll-mt-20">
+				@rankingNav(pageData)
+			</div>
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+				for _, artwork := range pageData.Contents {
+					if !artwork.ShouldHide(cd.CookieList) {
+						<div
+							class={
+								templ.Classes(
+									"flex flex-col h-fit gap-2",
+									templ.KV("col-span-2", artwork.Width > artwork.Height),
+									templ.KV("col-span-1", artwork.Width <= artwork.Height),
+								),
+							}
+						>
+							@fragments.ArtworkGridItem(artwork, fragments.DefaultArtworkGridItemProps())
+						</div>
+					}
+				}
+			</div>
+			@fragments.Pagination(fragments.PaginationProps{
+				BaseURL:     "/ranking?content=" + pageData.Content + "&date=" + pageData.CurrentDate + "&mode=" + pageData.Mode + "&page=",
+				EndingURL:   "#checkpoint",
+				CurrentPage: pageData.Page,
+				MaxPage:     pageData.MaxPages,
+			})
+		</div>
+		if nextDateURL != "" {
+			<link rel="prefetch" href={ templ.URL(nextDateURL) }/>
+		}
+		if prevDateURL != "" {
+			<link rel="prefetch" href={ templ.URL(prevDateURL) }/>
+		}
+	}
+}
+
+templ rankingNav(pageData core.RankingData) {
+	{{ url := "/ranking?content=" + pageData.Content + "&mode=" + pageData.Mode + "&page=1" }}
+	<div class="flex flex-col gap-8">
+		<div class="hidden sm:flex items-end justify-center sm:justify-between h-fit" aria-label="Date navigation">
+			if pageData.NextDate != "false" {
+				<a href={ templ.URL(url + "&date=" + pageData.NextDate) } class="hidden sm:flex">
+					<div class="filled-icon-button text-sm font-medium gap-2 !pe-4">
+						<span class="material-symbols-rounded-20">arrow_back</span>
+						<span class="hidden sm:inline">{ pageData.NextDate }</span>
+					</div>
+				</a>
+			} else {
+				<a class="hidden sm:flex" aria-disabled="true">
+					<div class="filled-icon-button text-sm font-medium gap-2 !pe-4 opacity-50 cursor-not-allowed">
+						<span class="material-symbols-rounded-20">arrow_back</span>
+						<span class="hidden sm:inline">{ pageData.NextDate }</span>
+					</div>
+				</a>
+			}
+			if pageData.PrevDate != "false" {
+				<a href={ templ.URL(url + "&date=" + pageData.PrevDate) } class="hidden sm:flex">
+					<div class="filled-icon-button text-sm font-medium gap-2 !ps-4">
+						<span class="hidden sm:inline">{ pageData.PrevDate }</span>
+						<span class="material-symbols-rounded-20">arrow_forward</span>
+					</div>
+				</a>
+			} else {
+				<a class="hidden sm:flex" aria-disabled="true">
+					<div class="filled-icon-button text-sm font-medium gap-2 !ps-4 opacity-50 cursor-not-allowed">
+						<span class="hidden sm:inline">{ pageData.PrevDate }</span>
+						<span class="material-symbols-rounded-20">arrow_forward</span>
+					</div>
+				</a>
+			}
+		</div>
+		<div class="flex sm:hidden items-center justify-between">
+			if pageData.NextDate != "false" {
+				<a href={ templ.URL(url + "&date=" + pageData.NextDate) }>
+					<div class="filled-icon-button text-sm font-medium gap-2 !pe-4">
+						<span class="material-symbols-rounded-20">arrow_back</span>
+						{ pageData.NextDate }
+					</div>
+				</a>
+			} else {
+				<a aria-disabled="true">
+					<div class="filled-icon-button text-sm font-medium gap-2 !pe-4 opacity-50 cursor-not-allowed">
+						<span class="material-symbols-rounded-20">arrow_back</span>
+						{ pageData.NextDate }
+					</div>
+				</a>
+			}
+			if pageData.PrevDate != "false" {
+				<a href={ templ.URL(url + "&date=" + pageData.PrevDate) }>
+					<div class="filled-icon-button text-sm font-medium gap-2 !ps-4">
+						{ pageData.PrevDate }
+						<span class="material-symbols-rounded-20">arrow_forward</span>
+					</div>
+				</a>
+			} else {
+				<a aria-disabled="true">
+					<div class="filled-icon-button text-sm font-medium gap-2 !ps-4 opacity-50 cursor-not-allowed">
+						{ pageData.PrevDate }
+						<span class="material-symbols-rounded-20">arrow_forward</span>
+					</div>
+				</a>
+			}
+		</div>
+	</div>
+}

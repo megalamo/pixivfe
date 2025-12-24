@@ -1,0 +1,462 @@
+package views
+
+import (
+	"fmt"
+
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+templ SearchPage(pageData core.SearchData) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		activeCategory := utils.GetMapParam(cd.Queries, "category", "artworks")
+		activeMode := utils.GetMapParam(cd.Queries, "mode", "safe")
+		parsedActiveCategory := core.ParseIllustType(activeCategory)
+		parsedActiveMode := core.ParseXRestrict(activeMode)
+
+		heroSrc := pageData.Tag.Metadata.Image
+		if pageData.Tag.CoverArtwork.Thumbnails.Webp_1200 != "" {
+			heroSrc = pageData.Tag.CoverArtwork.Thumbnails.Webp_1200
+		}
+	}}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full gap-8">
+			// Wrapper for hero content
+			<div
+				class={ templ.Classes("relative overflow-hidden -mx-4 -mt-8",
+       templ.KV("h-96", activeCategory != "users"),
+       templ.KV("h-64", activeCategory == "users")) }
+			>
+				<img
+					src={ heroSrc }
+					alt=""
+					class="absolute inset-0 size-full object-cover object-[50%_25%]"
+					fetchpriority="high"
+					decoding="async"
+				/>
+				// Absolutely positioned overlay for the gradient
+				<div class="absolute inset-0 size-full bg-linear-to-b from-neutral-900/60 to-neutral-900 p-8 z-1">
+					// Content wrapper with capped width.
+					<div class="flex flex-col size-full max-w-7xl gap-6 mx-auto">
+						// Wrapper for the wrapper for the main content
+						<div class="grow flex flex-col justify-center">
+							// Wrapper for the main content
+							<div class="flex flex-col w-full gap-6">
+								// Raw query
+								<h2 class="text-4xl sm:text-6xl tracking-tight font-bold">
+									{ cd.Queries["name"] }
+								</h2>
+								// Translation of query
+								if pageData.Tag.Metadata.Name != "" {
+									<h3 class="text-xl font-medium capitalize text-neutral-300 -mt-4">
+										{ pageData.Tag.Metadata.Name }
+									</h3>
+								}
+								// Wrapper for "N (works|users)"
+								<div class="text-neutral-300 -mt-3">
+									<span class="text-neutral-100 font-bold">
+										{ template.PrettyNumber(pageData.Total) }
+									</span>
+									<span class="font-medium">
+										if activeCategory != "users" {
+											works
+										} else {
+											users
+										}
+									</span>
+								</div>
+								// Description and external link to pixipedia
+								if pageData.Tag.Metadata.Detail != "" {
+									<p class="text-base/7 text-neutral-300 w-full max-w-3xl text-balance">
+										{ pageData.Tag.Metadata.Detail }
+									</p>
+									// External link to pixipedia
+									if activeCategory != "users" {
+										<a
+											href={ templ.URL("https://dic.pixiv.net/a/" + pageData.Tag.Name) }
+											target="_blank"
+											rel="noopener"
+											class="blue-link w-fit text-sm -mt-5"
+										>
+											More on pixpedia
+										</a>
+									}
+								}
+							</div>
+						</div>
+						// Cover art attribution
+						if pageData.Tag.Metadata.ID.String() != "" {
+							<a
+								href={ templ.URL("/artworks/" + pageData.Tag.Metadata.ID.String()) }
+								class="block self-end"
+							>
+								<div
+									class="text-sm text-link text-end"
+								>
+									<span class="italic">{ pageData.Tag.CoverArtwork.Title }</span> by { pageData.Tag.CoverArtwork.UserName }
+								</div>
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+			// Related tags
+			if len(pageData.RelatedTags) > 0 {
+				<div class="w-full max-w-7xl mx-auto">
+					@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+						Items:      fragments.TagsToChipItems(pageData.RelatedTags),
+						IllustType: &parsedActiveCategory,
+						XRestrict:  &parsedActiveMode,
+					})
+				</div>
+			}
+			<div id="checkpoint" class="flex flex-col w-full max-w-7xl gap-8 mx-auto scroll-mt-20">
+				// Categories and mode
+				<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+					@fragments.TabGroup(fragments.TabGroupProps{
+						BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "category"),
+						Entries: []fragments.TabGroupEntry{
+							{Path: "artworks", Name: "Overall", Icon: `<span class="material-symbols-rounded-20">home</span>`},
+							{Path: "illustrations", Name: "Illustrations", Icon: `<span class="material-symbols-rounded-20">image</span>`},
+							{Path: "manga", Name: "Manga", Icon: `<span class="material-symbols-rounded-20">manga</span>`},
+							{Path: "ugoira", Name: "Ugoira", Icon: `<span class="material-symbols-rounded-20">slideshow</span>`},
+							{Path: "novels", Name: "Novels", Icon: `<span class="material-symbols-rounded-20">book</span>`},
+							{Path: "users", Name: "Users", Icon: `<span class="material-symbols-rounded-20">person</span>`},
+						},
+						ActiveState: utils.GetMapParam(cd.Queries, "category", "artworks")})
+					@fragments.TabGroup(fragments.TabGroupProps{
+						BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "mode"),
+						Entries: []fragments.TabGroupEntry{
+							{Path: core.SearchFilterModeAll, Name: "All", Icon: `<span class="material-symbols-rounded-20">public</span>`},
+							{Path: core.SearchFilterModeSafe, Name: "Safe", Icon: `<span class="material-symbols-rounded-20">shield</span>`},
+							{Path: core.SearchFilterModeR18, Name: "R-18", Icon: `<span class="material-symbols-rounded-20">warning</span>`},
+						},
+						ActiveState: activeMode,
+						BaseShade:   "900"})
+				</div>
+				@fragments.Details("Search options", []string{"Refine your search."}, cd.HXTrigger == "details-search-form") {
+					@searchOptions(pageData)
+				}
+				<!-- Popular artworks -->
+				if (len(pageData.Popular.Permanent) + len(pageData.Popular.Recent) != 0) && pageData.CurrentPage == 1 {
+					<div class="flex flex-col w-full gap-8">
+						<input type="checkbox" id="show-popular" class="peer hidden"/>
+						<div class="peer-checked:hidden flex flex-col gap-6">
+							<div class="flex items-center justify-between text-neutral-100 gap-2">
+								<div class="flex flex-col border-amber-400 border-s-6 ps-4 pb-2">
+									<div class="text-sm text-neutral-400 starting:text-white transition duration-500 ease-out">
+										All time
+									</div>
+									<h3 class="text-xl font-medium">
+										Popular artworks
+									</h3>
+								</div>
+								if len(pageData.Popular.Recent) != 0 {
+									<label for="show-popular" class="tonal-button-neutral text-sm font-medium">
+										Show recent
+									</label>
+								}
+							</div>
+							if len(pageData.Popular.Permanent) != 0 {
+								<div
+									class="grid grid-rows-1 grid-flow-col *:w-48 *:sm:w-96 *:snap-start *:scroll-ms-2 snap-x snap-mandatory overflow-x-auto
+                        gap-6 ps-2 pt-2 pb-6 pe-48 -mt-2 -ms-2 -mb-6
+										    starting:opacity-0 opacity-100 transition duration-300"
+								>
+									@fragments.ArtworkGrid(pageData.Popular.Permanent)
+								</div>
+							}
+						</div>
+						<div class="hidden peer-checked:flex flex-col gap-6">
+							<div class="flex items-center justify-between text-neutral-100 gap-2">
+								<div class="flex flex-col border-amber-400 border-s-6 ps-4 pb-2">
+									<div class="text-sm text-neutral-400 starting:text-white transition duration-500 ease-out">
+										Recent
+									</div>
+									<h3 class="text-xl font-medium">
+										Popular artworks
+									</h3>
+								</div>
+								if len(pageData.Popular.Permanent) != 0 {
+									<label for="show-popular" class="tonal-button-neutral text-sm font-medium">
+										Show all time
+									</label>
+								}
+							</div>
+							if len(pageData.Popular.Recent) != 0 {
+								<div
+									class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6
+										starting:opacity-0 opacity-100 transition duration-300"
+								>
+									@fragments.ArtworkGrid(pageData.Popular.Recent)
+								</div>
+							}
+						</div>
+					</div>
+					@fragments.Separator("")
+				}
+				// Search results
+				if activeCategory == "novels" {
+					@fragments.NovelGrid(fragments.NovelGridProps{Novels: pageData.Novels.Data})
+				} else if activeCategory == "users" {
+					<div class="flex flex-col w-full gap-y-8">
+						for _, user := range pageData.Users.Data {
+							@fragments.UserTn(user)
+						}
+					</div>
+				} else {
+					{{
+						var data []core.ArtworkItem
+						switch activeCategory {
+						case "artworks":
+							data = pageData.IllustManga.Data
+						case "illustrations", "ugoira":
+							data = pageData.Illustrations.Data
+						case "manga":
+							data = pageData.Manga.Data
+						}
+					}}
+					if data != nil {
+						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+							@fragments.ArtworkGrid(data)
+						</div>
+					}
+				}
+				<!-- Pagination -->
+				{{
+					lastPage := -1
+					if pageData.LastPage != 0 {
+						lastPage = pageData.LastPage
+					}
+				}}
+				@fragments.Pagination(fragments.PaginationProps{
+					BaseURL:     template.UnfinishedQuery(cd.CurrentPathWithParams, "page"),
+					EndingURL:   "#checkpoint",
+					CurrentPage: pageData.CurrentPage,
+					MaxPage:     lastPage,
+				})
+			</div>
+		</div>
+	}
+}
+
+templ searchOptions(pageData core.SearchData) {
+	{{ cd := CommonData(ctx) }}
+	{{
+		activeCategory := utils.GetMapParam(cd.Queries, "category", "artworks")
+		activeMode := utils.GetMapParam(cd.Queries, "mode", "safe")
+		activeOrder := utils.GetMapParam(cd.Queries, "order", "date_d")
+		activeRatio := utils.GetMapParam(cd.Queries, "ratio", "")
+		activeSearchMode := utils.GetMapParam(cd.Queries, "smode", "s_tag")
+		activeTool := utils.GetMapParam(cd.Queries, "tool", "")
+	}}
+	// input changed delay:500ms from:input[name='name']
+	<form
+		action="/search"
+		method="get"
+		hx-get="/search"
+		hx-trigger="change"
+		hx-push-url="true"
+		hx-target="body"
+		hx-swap="outerHTML"
+		id="details-search-form"
+	>
+		<!-- Hidden inputs to maintain state -->
+		<input type="hidden" name="category" value={ activeCategory }/>
+		<input type="hidden" name="mode" value={ activeMode }/>
+		<div class="flex flex-wrap gap-6">
+			@fragments.Fieldset(fragments.FieldsetConfig{
+				InputName:    "name",
+				InputType:    "text",
+				ExtraClasses: "basis-full",
+				Required:     true,
+				Options: []fragments.FieldsetOption{
+					{
+						ID:       "name",
+						Label:    "Keywords",
+						Value:    cd.Queries["name"],
+						HelpText: "Prefix a keyword with a minus sign to exclude it.",
+					},
+				},
+			})
+			if activeCategory != "users" {
+				@fragments.Separator("")
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					Label:     "Search order",
+					InputName: "order",
+					InputType: "select",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:      "date_d",
+							Label:   "Newest",
+							Value:   "date_d",
+							Checked: activeOrder == "date_d",
+						},
+						{
+							ID:      "date",
+							Label:   "Oldest",
+							Value:   "date",
+							Checked: activeOrder == "date",
+						},
+					},
+				})
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					Label:     "Search mode",
+					InputName: "smode",
+					InputType: "select",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:      "smode-partial",
+							Label:   "Partial (tags)",
+							Value:   "s_tag",
+							Checked: activeSearchMode == "s_tag",
+						},
+						{
+							ID:      "smode-exact",
+							Label:   "Exact (tags)",
+							Value:   "s_tag_full",
+							Checked: activeSearchMode == "s_tag_full",
+						},
+						{
+							ID:      "smode-title-caption",
+							Label:   "Title/Caption",
+							Value:   "s_tc",
+							Checked: activeSearchMode == "s_tc",
+						},
+					},
+				})
+				@fragments.Separator("")
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "ecd",
+					InputType: "date",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:    "ecd",
+							Label: "Posted before",
+							Value: cd.Queries["ecd"],
+						},
+					},
+				})
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "scd",
+					InputType: "date",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:    "scd",
+							Label: "Posted after",
+							Value: cd.Queries["scd"],
+						},
+					},
+				})
+				@fragments.Separator("")
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "wlt",
+					InputType: "number",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:          "wlt",
+							Label:       "Minimum width (px)",
+							Value:       cd.Queries["wlt"],
+							Placeholder: "1024",
+						},
+					},
+				})
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "wgt",
+					InputType: "number",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:          "wgt",
+							Label:       "Maximum width (px)",
+							Value:       cd.Queries["wgt"],
+							Placeholder: "2048",
+						},
+					},
+				})
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "hlt",
+					InputType: "number",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:          "hlt",
+							Label:       "Minimum height (px)",
+							Value:       cd.Queries["hlt"],
+							Placeholder: "512",
+						},
+					},
+				})
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					InputName: "hgt",
+					InputType: "number",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:          "hgt",
+							Label:       "Maximum height (px)",
+							Value:       cd.Queries["hgt"],
+							Placeholder: "1024",
+						},
+					},
+				})
+				@fragments.Separator("")
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					Label:     "Aspect ratio",
+					InputName: "ratio",
+					InputType: "select",
+					Options: []fragments.FieldsetOption{
+						{
+							ID:      "ratio-any",
+							Label:   "Any",
+							Value:   "",
+							Checked: activeRatio == "",
+						},
+						{
+							ID:      "ratio-portrait",
+							Label:   "Portrait",
+							Value:   "-0.5",
+							Checked: activeRatio == "-0.5",
+						},
+						{
+							ID:      "ratio-square",
+							Label:   "Square",
+							Value:   "0",
+							Checked: activeRatio == "0",
+						},
+						{
+							ID:      "ratio-landscape",
+							Label:   "Landscape",
+							Value:   "0.5",
+							Checked: activeRatio == "0.5",
+						},
+					},
+				})
+				{{
+					toolOptions := make([]fragments.FieldsetOption, len(core.SearchToolValues))
+					for i, value := range core.SearchToolValues {
+						toolOptions[i] = fragments.FieldsetOption{
+							ID:      "tool-" + fmt.Sprintf("%d", i),
+							Label:   core.SearchToolLabels[i],
+							Value:   value,
+							Checked: activeTool == value,
+						}
+					}
+				}}
+				@fragments.Fieldset(fragments.FieldsetConfig{
+					Label:     "Creation tool",
+					InputName: "tool",
+					InputType: "select",
+					Options:   toolOptions,
+				})
+			}
+		</div>
+		<noscript>
+			<button type="submit" class="filled-button font-medium ms-auto gap-2 mt-8">
+				<span class="material-symbols-rounded-20">arrow_forward</span>
+				Go
+			</button>
+		</noscript>
+	</form>
+}
