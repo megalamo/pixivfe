@@ -1,0 +1,138 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ PixivisionIndex(pageData pixivision.IndexData) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col items-center w-full max-w-7xl gap-8">
+			// TODO: support grid and list views
+			if pageData.Page == 1 {
+				// Featured article from index
+				if len(pageData.IndexArticles) > 0 {
+					for _, article := range pageData.IndexArticles[:1] {
+						// Featured article
+						@fragments.PixivisionEntry(article, true)
+					}
+					@fragments.Separator("")
+				}
+			}
+			if pageData.Page != 1 {
+				// For subsequent pages, render index articles only
+				@fragments.ContentHeading(fragments.ContentHeadingProps{
+					Title:       "Latest on pixivision",
+					Description: "Your go-to source for that extra spark of creativity in your day.",
+					Eyebrow:     "Category",
+				})
+				@fragments.Separator("")
+				@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+					Items:           fragments.NavCategoryToChipItems(pixivision.NavCategories),
+					HighlightedName: "",
+				})
+				// Breadcrumb
+				@fragments.Breadcrumb(fragments.BreadcrumbProps{
+					Items: []fragments.BreadcrumbItem{
+						{URL: "/pixivision", Label: "Top"},
+					},
+					CurrentLabel: "Latest on pixivision",
+					Classes:      "",
+				})
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 scroll-mt-20">
+					for _, article := range pageData.IndexArticles {
+						@fragments.PixivisionEntry(article, false)
+					}
+				</div>
+			} else {
+				@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+					Items:           fragments.NavCategoryToChipItems(pixivision.NavCategories),
+					HighlightedName: "",
+				})
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 scroll-mt-20">
+					// Remaining index articles (skip the featured one)
+					if len(pageData.IndexArticles) > 1 {
+						@fragments.ContentHeading(fragments.ContentHeadingProps{
+							Title:       "Latest on pixivision",
+							Description: "Your go-to source for that extra spark of creativity in your day.",
+							Classes:     "-mb-2",
+							Href:        "/pixivision?p=2", // TODO: serve a separate custom `/newest` route instead of this page no. hack
+						})
+						for _, article := range pageData.IndexArticles[1:] {
+							@fragments.PixivisionEntry(article, false)
+						}
+					}
+					@fragments.Separator("")
+					<div class="flex flex-col border-amber-400 border-s-6 ps-4 pb-2">
+						@fragments.ContentHeading(fragments.ContentHeadingProps{
+							Title:       "Trending now",
+							Description: "See what everyone's reading this month.",
+							Classes:     "-mb-2",
+						})
+					</div>
+					<div class="col-span-full grid grid-flow-col auto-cols-[32rem] overflow-x-auto gap-8">
+						for _, article := range pageData.MonthlyRankingArticles {
+							@fragments.PixivisionEntry(article, false)
+						}
+					</div>
+					@fragments.Separator("")
+					// Category articles
+					@fragments.ContentHeading(fragments.ContentHeadingProps{
+						Title:       "Interviews",
+						Description: "Pro artists share their process, tools, and career advice.",
+						Classes:     "-mb-2",
+						Href:        "/pixivision/c/interview",
+					})
+					for _, article := range pageData.InterviewArticles {
+						@fragments.PixivisionEntry(article, false)
+					}
+					@fragments.Separator("")
+					<div class="flex flex-col border-blue-400 border-s-6 ps-4 pb-2">
+						@fragments.ContentHeading(fragments.ContentHeadingProps{
+							Title:       "Featured",
+							Description: "Your daily gallery of must-see illustrations.", // TODO: is it actually daily?
+							Classes:     "-mb-2",
+						})
+					</div>
+					<div class="col-span-full grid grid-flow-col auto-cols-[32rem] overflow-x-auto gap-8">
+						for _, article := range pageData.FeaturedArticles {
+							@fragments.PixivisionEntry(article, false)
+						}
+					</div>
+					@fragments.Separator("")
+					@fragments.ContentHeading(fragments.ContentHeadingProps{
+						Title:       "Columns",
+						Description: "Guidance for the real-life challenges of being a creator.",
+						Classes:     "-mb-2",
+						Href:        "/pixivision/c/column",
+					})
+					for _, article := range pageData.ColumnArticles {
+						@fragments.PixivisionEntry(article, false)
+					}
+					@fragments.Separator("")
+					@fragments.ContentHeading(fragments.ContentHeadingProps{
+						Title:       "News",
+						Description: "Stay current on fan art trends, new pixiv tools, and upcoming events.",
+						Classes:     "-mb-2",
+						Href:        "/pixivision/c/news",
+					})
+					for _, article := range pageData.NewsArticles {
+						@fragments.PixivisionEntry(article, false)
+					}
+				</div>
+			}
+			// Pagination
+			if pageData.Page > 1 {
+				@fragments.Pagination(fragments.PaginationProps{
+					BaseURL:     template.UnfinishedQuery(cd.CurrentPathWithParams, "p"),
+					EndingURL:   "",
+					CurrentPage: pageData.Page,
+					MaxPage:     -1,
+				})
+			}
+		</div>
+	}
+}

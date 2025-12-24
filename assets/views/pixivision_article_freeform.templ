@@ -1,0 +1,131 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+	"reflect"
+)
+
+templ PixivisionArticleFreeform(pageData pixivision.ArticleFreeformData) {
+	@layout.Default(pageData.Header.Title, false) {
+		<div class="flex flex-col items-stretch w-full max-w-3xl text-neutral-300 text-lg/8 gap-4">
+			<a href={ templ.URL(pageData.Header.Category.URL) } class="contents">
+				<div class="badge-primary interactive self-start">
+					{ pageData.Header.Category.Text }
+				</div>
+			</a>
+			<div class="text-neutral-100 text-3xl font-bold -mt-2">
+				{ pageData.Header.Title }
+			</div>
+			<div class="text-sm/6 font-medium text-neutral-300 -mt-2">
+				{ pageData.Header.Date.Format("2 January 2006") }
+			</div>
+			@fragments.Separator("my-4")
+			for _, bodyItem := range pageData.Body {
+				@renderBodyItem(bodyItem)
+			}
+		</div>
+	}
+}
+
+templ renderBodyItem(item pixivision.BodyItem) {
+	switch typedItem := item.(type) {
+		case pixivision.BodyHeading:
+			@fragments.Separator("my-4")
+			<h3 class="text-neutral-100 text-2xl font-bold">{ typedItem.Text }</h3>
+		case pixivision.BodyImage:
+			if typedItem.Href != "" {
+				<a href={ templ.URL(typedItem.Href) } class="contents">
+					<img src={ templ.URL(typedItem.Src) } alt={ typedItem.Alt } class="size-fit self-center rounded"/>
+				</a>
+			} else {
+				<img src={ templ.URL(typedItem.Src) } alt={ typedItem.Alt } class="size-fit self-center rounded"/>
+			}
+		case pixivision.BodyCredit:
+			<p class="text-sm text-neutral-400 italic -mt-2">{ typedItem.Text }</p>
+		case pixivision.BodyRichText:
+			<div class="description contents">
+				@templ.Raw(typedItem.HTMLContent)
+			</div>
+		case pixivision.BodyCaption:
+			<p class="text-sm text-neutral-400 italic -mt-2">{ typedItem.Text }</p>
+		case pixivision.BodyArticleCard:
+			// TODO: render these in a grid
+			@fragments.PixivisionEntry(typedItem.Article, false)
+		case pixivision.BodyQuestion:
+			<div class="bg-neutral-800 rounded-lg max-w-144 self-end text-neutral-100 px-4 py-3 mt-8 mb-2">
+				{ typedItem.Text }
+			</div>
+		case pixivision.BodyAnswer:
+			<div class="flex flex-nowrap max-w-144 text-neutral-300 gap-6">
+				if typedItem.ImageSrc != "" {
+					<img src={ templ.URL(typedItem.ImageSrc) } class="size-16 shrink-0 rounded-full object-cover"/>
+				}
+				<div class="flex flex-col gap-2">
+					<div class="text-neutral-100 font-bold">
+						{ typedItem.AuthorName }
+					</div>
+					@templ.Raw(typedItem.HTMLContent)
+				</div>
+			</div>
+		case pixivision.BodyBoothLink:
+			<div class="group/local flex flex-col max-w-144 self-center gap-6">
+				// Item image
+				<a href={ templ.URL(typedItem.ItemURL) } class="contents">
+					<div class="relative size-full rounded overflow-hidden">
+						<img src={ templ.URL(typedItem.ItemImageSrc) } class="size-full object-cover"/>
+						<div class="absolute inset-4 px-6 py-4 h-fit rounded-lg flex items-center bg-black/80 group-hover/local:bg-black/90 transition gap-4">
+							// Author image
+							<a href={ templ.URL(typedItem.AuthorURL) } class="contents">
+								<img src={ templ.URL(typedItem.AuthorImageSrc) } class="size-12 shrink-0 rounded-full object-cover"/>
+							</a>
+							<div>
+								// Item title
+								<a href={ templ.URL(typedItem.ItemURL) } class="contents">
+									<div class="w-fit text-neutral-100 font-medium hover:underline">
+										{ typedItem.ItemTitle }
+									</div>
+								</a>
+								// Author
+								<a href={ templ.URL(typedItem.AuthorURL) } class="contents">
+									<div class="w-fit text-neutral-400 font-normal text-sm hover:underline">
+										{ typedItem.AuthorName }
+									</div>
+								</a>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+		case pixivision.AuthorProfile:
+			<div class="border border-neutral-700 rounded-lg p-4">
+				<div class="flex items-start gap-6">
+					if typedItem.ImageSrc != "" {
+						<img src={ templ.URL(typedItem.ImageSrc) } alt={ typedItem.Name } class="size-16 shrink-0 rounded-full object-cover"/>
+					}
+					<div class="flex flex-col gap-4">
+						@fragments.ContentHeading(fragments.ContentHeadingProps{
+							Title: typedItem.Name,
+						})
+						if typedItem.BioHTML != "" {
+							<div class="text-wrap wrap-anywhere text-sm/6 -mt-2">
+								@templ.Raw(typedItem.BioHTML)
+							</div>
+						}
+						if len(typedItem.Links) > 0 {
+							@fragments.Separator("")
+							@fragments.SocialMediaLinks(fragments.SocialMediaLinksProps{
+								Social: typedItem.Links,
+								UserID: "",
+							})
+						}
+					</div>
+				</div>
+			</div>
+		default:
+			<div class="text-sm text-neutral-400 italic">
+				{ "Unknown content type: " + reflect.TypeOf(item).String() }
+			</div>
+	}
+}

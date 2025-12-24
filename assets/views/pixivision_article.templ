@@ -1,0 +1,142 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+	"strconv"
+	"strings"
+)
+
+templ pixivisionArticleArtworkColumn(data pixivision.ArticleItem, i int, total int) {
+	<div class="relative grid grid-rows-1 grid-cols-1 w-fit mx-auto">
+		// Thumbnail
+		for _, img := range data.Images {
+			<a href={ templ.URL("/artworks/" + data.ID) } class="contents">
+				<img
+					src={ templ.URL(img) }
+					class="col-start-1 row-start-1 max-h-256 object-cover rounded"
+				/>
+			</a>
+		}
+		<div class="col-start-1 row-start-1 self-end sticky bottom-2 flex items-start min-w-48 w-fit gap-3 rounded-lg bg-black/80 hover:bg-black/90 transition p-2 px-3 m-2">
+			<div class="text-sm/6 text-neutral-300">
+				{ strconv.Itoa(i + 1) }/{ strconv.Itoa(total) }
+			</div>
+			<div class="flex flex-col gap-1">
+				<a href={ templ.URL("/artworks/" + data.ID) } class="w-fit">
+					<div class="animated-underline line-clamp-1 font-bold text-neutral-100">
+						{ data.Title }
+					</div>
+				</a>
+				<div class="hidden md:flex items-center gap-2">
+					<a href={ templ.URL("/users/" + data.UserID + "/") }>
+						<img
+							src={ templ.URL(data.Avatar) }
+							class="aspect-square object-cover rounded-full size-5 min-w-5 avatar-outline-glow"
+						/>
+					</a>
+					<a href={ templ.URL("/users/" + data.UserID + "/") }>
+						<div class="animated-underline text-neutral-300 line-clamp-1">
+							{ data.Username }
+						</div>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ PixivisionArticle(pageData pixivision.ArticleData) {
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full gap-8 mx-auto">
+			<div class="relative rounded overflow-hidden -mt-8 -mx-4">
+				<img
+					src={ templ.URL(pageData.Thumbnail) }
+					class="hidden md:block w-full h-156 object-cover"
+					width="400"
+					height="210"
+				/>
+				<div class="md:absolute inset-0 z-1 flex items-center justify-center w-full h-full rounded-t bg-linear-to-b from-neutral-900/60 to-neutral-900 p-8">
+					<div class="flex flex-col w-full max-w-4xl gap-4">
+						<a href={ templ.URL("/pixivision/c/" + pageData.CategoryID) } class="w-fit">
+							<div class="badge-primary interactive w-fit">{ pageData.Category }</div>
+						</a>
+						<h1 class="text-3xl font-bold -mt-2">{ pageData.Title }</h1>
+						// Publication date
+						<div class="text-sm/6 font-medium text-neutral-300 -mt-2">
+							{ pageData.Date.Format("2 January 2006") }
+						</div>
+						<img
+							src={ templ.URL(pageData.Thumbnail) }
+							class="block md:hidden rounded w-full h-full object-cover"
+							width="400"
+							height="210"
+						/>
+						for i, desc := range pageData.Description {
+							if desc != "" && i < 2 {
+								<p class="text-sm/6 text-neutral-300 first-of-type:mt-0 -mt-2">
+									@templ.Raw(desc)
+								</p>
+							}
+						}
+						if len(pageData.Description) > 2 {
+							<button popovertarget="description" class="tonal-button-neutral text-sm font-medium !border-neutral-500 !border">
+								Read more
+							</button>
+							@fragments.Modal("description", "Description", "") {
+								for _, desc := range pageData.Description {
+									if desc != "" {
+										<p class="text-sm/6 text-neutral-300">
+											@templ.Raw(desc)
+										</p>
+									}
+								}
+							}
+						}
+						if len(pageData.Tags) > 0 {
+							<div class="flex flex-wrap items-center gap-2">
+								for _, tag := range pageData.Tags {
+									<a href={ templ.URL("/pixivision/t/" + tag.ID) }>
+										<div class="blue-link text-sm">
+											#{ tag.Name }
+										</div>
+									</a>
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 auto-rows-max w-full max-w-3xl gap-8 mx-auto">
+				for i, item := range pageData.Items {
+					@pixivisionArticleArtworkColumn(item, i, len(pageData.Items))
+				}
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full max-w-7xl gap-8 mx-auto mt-16">
+				<div class="col-span-full text-2xl font-light text-neutral-300 -mb-4">
+					Newest articles tagged <a href={ templ.URL(pageData.NewestTaggedArticles.HeadingLink) } class="text-link text-neutral-200 hover:text-neutral-100 font-medium">#{ strings.ToLower(pageData.Tags[0].Name) }</a>
+				</div>
+				for _, article := range pageData.NewestTaggedArticles.Articles {
+					@fragments.PixivisionEntry(article, false)
+				}
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full max-w-7xl gap-8 mx-auto mt-4">
+				<div class="col-span-full text-2xl font-light text-neutral-300 -mb-4">
+					If you liked <a href={ templ.URL(pageData.PopularTaggedArticles.HeadingLink) } class="text-link text-neutral-200 hover:text-neutral-100 font-medium">#{ strings.ToLower(pageData.Tags[0].Name) }</a>, you will also love...
+				</div>
+				for _, article := range pageData.PopularTaggedArticles.Articles {
+					@fragments.PixivisionEntry(article, false)
+				}
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full max-w-7xl gap-8 mx-auto mt-4">
+				<div class="col-span-full text-2xl font-light text-neutral-300 -mb-4">
+					Newest articles tagged <a href={ templ.URL(pageData.NewestCategoryArticles.HeadingLink) } class="text-link text-neutral-200 hover:text-neutral-100 font-medium">#{ strings.ToLower(pageData.Category) }</a>
+				</div>
+				for _, article := range pageData.NewestCategoryArticles.Articles {
+					@fragments.PixivisionEntry(article, false)
+				}
+			</div>
+		</div>
+	}
+}

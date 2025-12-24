@@ -1,0 +1,51 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core/pixivision"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+templ PixivisionCategory(pageData pixivision.CategoryData) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full max-w-7xl gap-8">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Title:   pageData.Category.Title,
+				Eyebrow: "Category",
+			})
+			if pageData.Category.Description != "" {
+				<p class="max-w-2xl text-sm/6 text-neutral-300 -mt-4">
+					{ pageData.Category.Description }
+				</p>
+			}
+			@fragments.Separator("")
+			@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+				Items:           fragments.NavCategoryToChipItems(pixivision.NavCategories),
+				HighlightedName: pageData.Title,
+			})
+			// Breadcrumb
+			@fragments.Breadcrumb(fragments.BreadcrumbProps{
+				Items: []fragments.BreadcrumbItem{
+					{URL: "/pixivision", Label: "Top"},
+				},
+				CurrentLabel: pageData.Title,
+				Classes:      "",
+			})
+			// Content
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-7xl gap-8 scroll-mt-20 mx-auto">
+				for _, article := range pageData.Category.Articles {
+					@fragments.PixivisionEntry(article, false)
+				}
+			</div>
+			// Pagination
+			@fragments.Pagination(fragments.PaginationProps{
+				BaseURL:     template.UnfinishedQuery(cd.CurrentPathWithParams, "p"),
+				EndingURL:   "",
+				CurrentPage: pageData.CurrentPage,
+				MaxPage:     -1,
+			})
+		</div>
+	}
+}
