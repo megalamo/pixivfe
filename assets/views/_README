@@ -1,0 +1,11 @@
+This directory contains templ components that represent entire pages. These components are composed of layout elements and page-specific content.
+
+## Usage
+
+To use these components, import them using the path:
+
+```go
+import "codeberg.org/pixivfe/pixivfe/v3/assets/views"
+```
+
+These components are called by route handlers to render a full HTML response. For an idiomatic usage example, see server/routes/about.go.
