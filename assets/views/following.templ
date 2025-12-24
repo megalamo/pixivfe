@@ -1,0 +1,49 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/server/utils"
+)
+
+templ Following(pageData core.FollowingData, mode string) {
+	{{ cd := CommonData(ctx) }}
+	{{ activeMode := utils.GetMapParam(cd.Queries, "mode", mode) }}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full max-w-7xl gap-8 scroll-mt-20">
+			@fragments.ContentHeading(fragments.ContentHeadingProps{
+				Eyebrow: "You",
+				Title:   "Latest from following",
+			})
+			@fragments.Separator("-mt-4")
+			@fragments.TabGroup(fragments.TabGroupProps{
+				BaseURL: template.UnfinishedQuery(cd.CurrentPathWithParams, "mode"),
+				Entries: []fragments.TabGroupEntry{
+					{Path: "all", Name: "All", Icon: `<span class="material-symbols-rounded-20">public</span>`},
+					{Path: "safe", Name: "Safe", Icon: `<span class="material-symbols-rounded-20">shield</span>`},
+					{Path: "r18", Name: "R-18", Icon: `<span class="material-symbols-rounded-20">warning</span>`},
+				},
+				ActiveState: activeMode,
+				BaseShade:   "900"},
+			)
+			if len(pageData.Data.Thumbnails.Illust) > 0 {
+				<div id="checkpoint" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+					@fragments.ArtworkGrid(pageData.Data.Thumbnails.Illust)
+				</div>
+			} else {
+				<p class="text-neutral-300">Nothing here yet&#8212;find a user to follow!</p>
+			}
+			// Pagination
+			if len(pageData.Data.Thumbnails.Illust) > 0 {
+				@fragments.Pagination(fragments.PaginationProps{
+					BaseURL:     template.UnfinishedQuery(cd.CurrentPathWithParams, "page"),
+					EndingURL:   "#checkpoint",
+					CurrentPage: pageData.CurrentPage,
+					MaxPage:     -1,
+				})
+			}
+		</div>
+	}
+}

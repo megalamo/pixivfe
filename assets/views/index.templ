@@ -1,0 +1,137 @@
+package views
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/layout"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+)
+
+templ Index(pageData core.IndexData) {
+	{{ cd := CommonData(ctx) }}
+	@layout.Default(pageData.Title, false) {
+		<div class="flex flex-col w-full max-w-7xl gap-8 mx-auto">
+			if !cd.LoggedIn {
+				// Not logged in content
+				<div class="bg-blue-100 border-t-4 border-blue-500 rounded-b text-blue-900 px-4 py-3 mx-auto shadow-md max-w-lg" role="alert">
+					<div class="flex">
+						<div class="py-1"><span class="material-symbols-rounded-20">info</span></div>
+						<div>
+							<p class="font-bold">You are not logged in.</p>
+							<p class="text-sm">Log in with your Pixiv account for more personalized contents and features!</p>
+						</div>
+					</div>
+				</div>
+				<h1 class="text-2xl font-bold">Today's rankings</h1>
+				<div class="grid grid-cols-2 md:grid-cols-6 gap-6">
+					@fragments.ArtworkGrid(pageData.Data.Rankings.Contents)
+				</div>
+				<h1 class="text-2xl font-bold">Newest articles on pixivision</h1>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					for _, article := range pageData.Data.Pixivision {
+						<div>
+							<div>
+								<a href={ templ.URL("/pixivision/a/" + article.ID) } class="w-fit">
+									<img src={ article.Thumbnail } alt={ article.Title }/>
+								</a>
+							</div>
+							<div>
+								<a href={ templ.URL("/pixivision/a/" + article.ID) } class="w-fit">
+									<div class="text-lg font-bold text-neutral-200 hover:text-neutral-100 animated-underline">{ article.Title }</div>
+								</a>
+							</div>
+						</div>
+					}
+				</div>
+			} else {
+				// Logged in content
+				<h1 class="text-2xl font-bold">Newest works you're following</h1>
+				<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+					if len(pageData.Data.Following) > 0 {
+						@fragments.ArtworkGrid(pageData.Data.Following)
+					}
+				</div>
+				<a href="/self/followingWorks" class="peer-checked:!hidden filled-button font-medium mx-auto">
+					View more
+				</a>
+				<h1 class="text-2xl font-bold">Recommended works</h1>
+				<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+					@fragments.ArtworkGrid(pageData.Data.Recommended)
+				</div>
+				<h1 class="text-2xl font-bold">Recommended users</h1>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					for _, user := range pageData.Data.RecommendUser {
+						<div>
+							// For user's avatar and info
+							<div class="flex justify-between gap-1 mb-2">
+								<a href={ templ.URL("/users/" + user.ID) } title={ user.Name } class="aspect-square object-cover rounded-full size-14 mr-2 avatar-outline-glow">
+									<img src={ user.Avatar } alt={ user.Name + "'s avatar" } class="size-14 aspect-square rounded-full"/>
+								</a>
+								<div class="w-full">
+									<div class="flex gap-4 justify-between items-center">
+										<a href={ templ.URL("/users/" + user.ID) } class="text-xl font-bold line-clamp-1 text-ellipsis animated-underline-alt">{ user.Name }</a>
+										@fragments.FollowButtons(user.ID, user.IsFollowed, "filled")
+									</div>
+									if user.Comment != "" {
+										<small class="text-sm line-clamp-1 text-ellipsis">
+											@templ.Raw(user.Comment)
+										</small>
+									}
+								</div>
+							</div>
+							// For artworks
+							<div class="flex flex-wrap justify-around">
+								for _, artwork := range user.Artworks {
+									@fragments.ArtworkGridItem(artwork, fragments.ArtworkGridItemProps{
+										ShowTitle:      true,
+										ShowArtist:     false,
+										ContainerClass: "flex flex-col w-3/10",
+										UsePathLogic:   false,
+									})
+									<div class="py-[2px]"></div>
+								}
+							</div>
+						</div>
+					}
+				</div>
+				<h1 class="text-2xl font-bold">Popular tags</h1>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					for _, tag := range pageData.Data.PopularTag {
+						// NOTE: Trending indicator not implemented yet
+						<div class="flex flex-col gap-4 w-full">
+							<a href={ templ.URL("/search?name=" + tag.Name) } class="text-lg font-bold hover:visited:text-purple-300 visited:text-purple-400 hover:text-blue-300 text-blue-400 animated-underline-alt w-fit">#{ tag.Name }</a>
+							<div
+								class={ templ.Classes(
+								"flex flex-wrap",
+								templ.KV("gap-6", len(tag.Artworks) < 3),
+								templ.KV("justify-around", len(tag.Artworks) >= 3),
+							) }
+							>
+								for _, artwork := range tag.Artworks {
+									@fragments.ArtworkGridItem(artwork, fragments.ArtworkGridItemProps{
+										ShowTitle:      true,
+										ShowArtist:     false,
+										ContainerClass: "flex flex-col w-3/10",
+										UsePathLogic:   false,
+									})
+								}
+							</div>
+						</div>
+					}
+				</div>
+				for _, recommendTag := range pageData.Data.RecommendByTags {
+					<h2 class="text-xl font-bold">
+						Recommended illustrations tagged
+						<a href={ templ.URL("/search?name=" + recommendTag.Name) } class="hover:visited:text-purple-300 visited:text-purple-400 hover:text-blue-300 text-blue-400 font-medium animated-underline-alt">#{ recommendTag.Name }</a>
+					</h2>
+					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+						@fragments.ArtworkGrid(recommendTag.Artworks)
+					</div>
+				}
+				<h1 class="text-2xl font-bold">Newest works</h1>
+				<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+					@fragments.ArtworkGrid(pageData.Data.Newest)
+				</div>
+			}
+		</div>
+	}
+}
