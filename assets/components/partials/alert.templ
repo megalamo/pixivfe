@@ -1,0 +1,42 @@
+package partials
+
+// AlertProps defines the properties for the Alert component
+type AlertProps struct {
+	Message     string // The text content to display. It's expected to be already translated.
+	Level       string // The alert level: "info" for info messages, "warning" for warning messages
+	Dismissible bool   // Whether the alert can be dismissed with a close button
+}
+
+// Alert renders a info or warning message for htmx responses.
+templ Alert(props AlertProps) {
+	// #form-htmx-target is a hidden div that acts as a target placeholder for htmx to swap content into.
+	<div class="form-htmx-target" hidden></div>
+	<div
+		id="form-htmx-response"
+		class={
+			"flex items-center w-fit max-w-full text-sm/6 rounded-md gap-4 py-3 px-4 transition-opacity duration-300",
+			templ.KV("bg-blue-500/10 border border-blue-500 text-blue-100 fill-blue-100", props.Level == "info"),            // info style
+			templ.KV("bg-yellow-500/10 border border-yellow-500 text-yellow-100 fill-yellow-100", props.Level == "warning"), // warning style
+		}
+	>
+		if props.Message != "" {
+			@templ.Raw(props.Message)
+		} else {
+			{ children... }
+		}
+		if props.Dismissible {
+			<button
+				type="button"
+				class={
+					"material-symbols-rounded-20 size-fit cursor-pointer transition rounded-full p-1 -me-1",
+					templ.KV("hover:bg-blue-500/20", props.Level == "info"),
+					templ.KV("hover:bg-yellow-500/20", props.Level == "warning"),
+					"js-close-form-response-btn",
+				}
+				aria-label="Close"
+			>
+				close
+			</button>
+		}
+	</div>
+}

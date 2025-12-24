@@ -1,0 +1,115 @@
+package partials
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/i18n"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"fmt"
+	"net/url"
+	"strconv"
+)
+
+// mustAtoi converts a string to an integer.
+// Returns 0 if the conversion fails.
+func mustAtoi(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return i
+}
+
+// TagCompletions renders the suggestions container and its list for a single keyword.
+templ TagCompletions(data *core.KeywordCompletions, category string) {
+	@tagCompWrapper(data) {
+		<div id="navbar_search_listbox" role="listbox" aria-label={ i18n.Tr(ctx, "Suggestions") } class="contents">
+			for i, candidate := range data.Candidates {
+				{{
+					href := "/search?name=" + url.QueryEscape(candidate.TagName)
+					if category != "" {
+						href += "&category=" + url.QueryEscape(category)
+					}
+				}}
+				// Store the navigation URL for potential programmatic use. Do not put href on a div.
+				<div
+					id={ fmt.Sprintf("%s_%d", "navbar_search_suggestion", i+1) }
+					role="option"
+					aria-selected="false"
+					data-tag-name={ candidate.TagName }
+					data-original-keyword={ data.Keyword }
+					data-href={ templ.URL(href) }
+					class="group/local max-w-full border border-transparent aria-selected:border-neutral-500 bg-neutral-800 flex items-center gap-4 text-xs/5 aria-selected:bg-neutral-700 rounded transition-none px-2 py-1 cursor-pointer"
+				>
+					<div class="shrink-0 flex items-center justify-center size-7 border border-neutral-700 text-neutral-200 bg-neutral-900 group-aria-selected/local:bg-neutral-100 group-aria-selected/local:text-neutral-900 rounded text-sm font-mono">
+						{ fmt.Sprintf("%d",i + 1) }
+					</div>
+					<div class="min-w-0 grow flex items-start justify-between gap-4">
+						<div class="min-w-0">
+							<div class="group-aria-selected/local:text-neutral-100 text-neutral-200 text-sm/6 truncate">
+								{ candidate.TagName }
+							</div>
+							if candidate.TagTranslation != "" {
+								<div class="group-aria-selected/local:text-neutral-300 text-neutral-400 truncate">
+									{ candidate.TagTranslation }
+								</div>
+							}
+						</div>
+						<div class="shrink-0 flex items-center gap-1 group-aria-selected/local:text-neutral-300 text-neutral-400 leading-6">
+							{ i18n.Tr(ctx, "{{ .accessCount }} views", "accessCount", template.AbbrevInt(mustAtoi(candidate.AccessCount))) }
+						</div>
+					</div>
+				</div>
+				if i < len(data.Candidates)-1 {
+					// Decorative separator should not be part of the listbox's option structure.
+					<div role="presentation" aria-hidden="true">
+						@fragments.Separator("!bg-neutral-700")
+					</div>
+				}
+			}
+		</div>
+		// Decorative separator before the hint, outside the listbox.
+		<div role="presentation" aria-hidden="true">
+			@fragments.Separator("!bg-neutral-700")
+		</div>
+		// Keyboard tip placed outside the listbox so it is not treated as an option by assistive tech.
+		// NOTE: This text is not highlightable due to JS indirectly blocking it (see onContainerMouseDown).
+		// .select-none is applied to avoid presenting a false affordance.
+		<div id="navbar_search_hint" class="text-xs text-neutral-400 p-2 text-center select-none">
+			<span class="font-bold">Tip:</span> Use <span class="font-mono">Alt+Shift+1..9</span> to quickly accept suggestions.
+		</div>
+	}
+}
+
+// Pass a nil [*core.KeywordCompletions] if no keywords were provided/empty state,
+// pass an empty one to show that a search was made, but no results were found
+// An empty listbox with the known id is always rendered so aria-controls resolves even when empty.
+templ TagCompletionsNoContent(data *core.KeywordCompletions) {
+	@tagCompWrapper(data) {
+		<div id="navbar_search_listbox" role="listbox" aria-label={ i18n.Tr(ctx, "Suggestions") }></div>
+		<div class="text-xs text-neutral-400 p-2">{ i18n.Tr(ctx, "No suggestions were found.") }</div>
+	}
+}
+
+// NOTE: data-has-items here indicates "data present" rather than "non-empty options".
+// It is used by JS to decide when to show the popup alongside focus checks.
+templ tagCompWrapper(data *core.KeywordCompletions) {
+	<div
+		id="navbar_search_suggestions"
+		data-has-items={ fmt.Sprint(data != nil) }
+		data-visible="false"
+		class="hidden data-[visible=true]:flex flex-col gap-1 fixed left-1/2 top-16 -translate-x-1/2 w-10/12 max-w-md bg-neutral-800 border border-neutral-700 rounded-lg drop-shadow-xl drop-shadow-black/40 max-h-72 md:max-h-[80svh] overflow-y-auto p-2"
+		hx-get="/api/tag-completions"
+		hx-trigger="input changed from:#navbar_search_input queue:last, input changed from:#navbar_search_category, focus from:#navbar_search_input"
+		hx-include="#navbar_search_input, #navbar_search_category, #navbar_search_version"
+		hx-target="this"
+		hx-swap="outerHTML show:none swap:0ms settle:0ms"
+		hx-sync="this:replace"
+		hx-push-url="false"
+		hx-indicator="this"
+		data-no-loading-indicator
+		aria-hidden="true"
+	>
+		{ children... }
+	</div>
+}

@@ -1,0 +1,255 @@
+// Copyright 2023 - 2025, VnPower and the PixivFE contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package partials
+
+import (
+	"fmt"
+	"net/url"
+	"strconv"
+
+	"codeberg.org/pixivfe/pixivfe/v3/assets/components/fragments"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+)
+
+// StreetItems renders a chunk of street feed items and the infinite scroll loader.
+// Used for the initial load and for subsequent partial loads via the API.
+templ StreetItems(pageData core.StreetData) {
+	{{ cd := fragments.CommonData(ctx) }}
+	for i, entry := range pageData.Contents {
+		if i > 0 {
+			// A separator should not be rendered if the previous item was also a separator,
+			// as this would create a double-thick separator.
+			if _, ok := pageData.Contents[i-1].(core.SeparatorContent); !ok {
+				@fragments.Separator("htmx-added-in !bg-neutral-700")
+			}
+		}
+		switch item := entry.(type) {
+			case core.SeparatorContent:
+				// Essentially a no-op, only renders a background break in the official frontend.
+				// The actual separator is rendered by the logic above, before the *next* content item.
+			case core.IllustMangaContent:
+				if len(item.Thumbnails) > 0 && len(item.Thumbnails[0].Pages) > 0 {
+					{{
+						firstThumbnail := item.Thumbnails[0]
+						firstImage := firstThumbnail.Pages[0]
+						pickup := item.Pickup
+						createDateData := template.RelativeTime(firstThumbnail.CreateDate)
+						updateDurationText := template.FormatDuration(firstThumbnail.UpdateDuration)
+					}}
+					// Wrapper div for the entry
+					<article class="htmx-added-in flex flex-col py-6 sm:px-6 gap-2">
+						// Wrapper div for author avatar and content
+						<div class="flex gap-4">
+							<div class="flex flex-col items-center shrink-0 gap-2">
+								// Author avatar
+								<a
+									class="contents"
+									href={ templ.URL("/users/" + firstThumbnail.UserID) }
+								>
+									<img
+										src={ templ.URL(firstThumbnail.ProfileImageURL) }
+										alt={ firstThumbnail.UserName }
+										class="aspect-square object-cover rounded-full size-10 shrink-0 avatar-outline-glow"
+									/>
+								</a>
+								if pickup != nil {
+									<div class="w-[2px] h-full bg-neutral-700"></div>
+								}
+							</div>
+							// Wrapper div for entry content
+							<div class="grow min-w-0">
+								<div class="flex justify-between gap-2">
+									<div class="flex flex-col gap-1">
+										<div>
+											<div class="text-xs text-neutral-400">Artist</div>
+											// Author username
+											<a
+												class="block w-fit font-bold text-neutral-100 text-link-alt"
+												href={ templ.URL("/users/" + firstThumbnail.UserID) }
+											>
+												{ firstThumbnail.UserName }
+											</a>
+										</div>
+										// Title
+										<a
+											href={ templ.URL("/artworks/" + firstThumbnail.ID) }
+											class="block w-fit text-neutral-300 text-base/7 !font-normal text-link-alt"
+										>
+											{ firstThumbnail.Title }
+										</a>
+									</div>
+									<div class="flex flex-col gap-2 shrink-0">
+										<div class="flex items-center justify-end gap-1 text-sm text-neutral-400" title={ template.NaturalTime(firstThumbnail.CreateDate) }>
+											<div class="material-symbols-rounded-16">today</div>
+											<div>
+												<span>{ createDateData.Value }</span>
+												<span>{ createDateData.Description }</span>
+												if createDateData.Time != "" {
+													<span>{ createDateData.Time }</span>
+												}
+											</div>
+										</div>
+										if firstThumbnail.CreateDate != firstThumbnail.UpdateDate && updateDurationText != "" {
+											<div class="flex items-center justify-end gap-1 text-xs text-neutral-400" title={ template.NaturalTime(firstThumbnail.UpdateDate) }>
+												<div class="material-symbols-rounded-16">history</div>
+												<div>
+													<span>{ updateDurationText }</span>
+													<span>later</span>
+												</div>
+											</div>
+										}
+									</div>
+								</div>
+								// Tags
+								{{ itemIllustType := core.ParseIllustType(item.Kind) }}
+								@fragments.HorizontalChipList(fragments.HorizontalChipListProps{
+									Items:          fragments.TagsToChipItems(firstThumbnail.Tags),
+									WrapperClasses: "flex-wrap mt-4",
+									Size:           "compact",
+									AsTags:         true,
+									AIType:         firstThumbnail.AIType,
+									IllustType:     &itemIllustType,
+									XRestrict:      nil, // The street API doesn't support R-18 nor R-18G content.
+								})
+								// Thumbnail image
+								<div class="flex flex-col items-center w-full bg-neutral-950 rounded border border-neutral-700 mt-6">
+									<a
+										href={ templ.URL("/artworks/" + firstThumbnail.ID) }
+										class="contents"
+										hx-boost="false"
+									>
+										<img
+											src={ templ.URL(firstImage.Urls.Standard) }
+											alt={ fmt.Sprintf("Page %d", 1) }
+											class="max-w-full h-auto rounded"
+											width={ fmt.Sprintf("%d", firstImage.Width) }
+											height={ fmt.Sprintf("%d", firstImage.Height) }
+											data-is_manga={ fmt.Sprintf("%t", firstThumbnail.Type == "manga") }
+											data-is_landscape={ fmt.Sprintf("%t", firstImage.Width > firstImage.Height) }
+										/>
+									</a>
+								</div>
+								<div class="flex items-center justify-end font-medium gap-6 py-4">
+									@fragments.LikeTextButton(fragments.LikeData{
+										ID: firstThumbnail.ID,
+									})
+									@fragments.AddBookmarkTextButton(fragments.AddBookmarkData{
+										ID: firstThumbnail.ID,
+									})
+									// <div class="outlined-button !p-2">
+									// 	<div class="material-symbols-rounded-20">thumb_up</div>
+									// </div>
+									// <div class="filled-icon-button-alt">
+									// 	<div class="material-symbols-rounded-20">favorite</div>
+									// </div>
+								</div>
+							</div>
+						</div>
+						// Featured "pickup" comment
+						if pickup != nil {
+							<div class="flex gap-4">
+								<a
+									href={ templ.URL("/users/" + pickup.UserID + "?category=bookmarks") }
+									class="contents"
+								>
+									<img
+										src={ pickup.ProfileImageURL }
+										alt={ pickup.UserName }
+										loading="lazy"
+										class="aspect-square object-cover size-10 shrink-0 rounded-full avatar-outline-glow"
+									/>
+								</a>
+								<div class="flex flex-col gap-1">
+									<div>
+										<div class="text-xs text-neutral-400">Commenter</div>
+										<a
+											class="block w-fit font-bold text-neutral-100 text-link-alt"
+											href={ templ.URL("/users/" + pickup.UserID) }
+										>
+											{ pickup.UserName }
+										</a>
+									</div>
+									<p class="flex flex-wrap text-wrap wrap-anywhere text-neutral-300 text-base/7 gap-2">
+										@templ.Raw(pickup.Comment)
+									</p>
+								</div>
+							</div>
+						}
+					</article>
+				}
+			case core.TagsCarouselContent:
+				<article class="htmx-added-in flex flex-col py-6 gap-4">
+					<header class="sm:px-6">
+						<h2 class="font-bold text-neutral-100">Featured tags</h2>
+					</header>
+					{{ carouselItems := fragments.StreetTagsCarouselToCarouselItems(cd, item) }}
+					if len(carouselItems) > 0 {
+						<div class="sm:px-6">
+							@fragments.VerticalImageCarousel(fragments.VerticalImageCarouselProps{
+								Items:   carouselItems,
+								EndCard: nil,
+							})
+						</div>
+					}
+				</article>
+			default:
+				{{
+					var kind string
+					if v, ok := item.(core.NovelContent); ok {
+						kind = v.Kind
+					} else if v, ok := item.(core.TagsCarouselContent); ok {
+						kind = v.Kind
+					} else if v, ok := item.(core.PixivisionContent); ok {
+						kind = v.Kind
+					} else if v, ok := item.(core.SeparatorContent); ok {
+						kind = v.Kind
+					} else {
+						kind = "unknown"
+					}
+				}}
+				<div class="htmx-added-in flex items-center self-center gap-2 text-sm text-neutral-400 border border-neutral-700 rounded p-3 my-5">
+					<div class="material-symbols-rounded-20">warning</div>
+					{ fmt.Sprintf("Unsupported content kind: %s", kind) }
+				</div>
+		}
+	}
+	// Infinite scroll trigger
+	if pageData.NextParams != nil {
+		// A separator should not be rendered if the last item in the current chunk was a separator type,
+		// as this would create a double separator at the boundary between this chunk and the next.
+		{{
+			var lastItemIsSeparator bool
+			if len(pageData.Contents) > 0 {
+				_, lastItemIsSeparator = pageData.Contents[len(pageData.Contents)-1].(core.SeparatorContent)
+			}
+			// Build query parameters for the next request.
+			nextParams := url.Values{}
+			nextParams.Set("page", strconv.Itoa(pageData.NextParams.Page))
+			nextParams.Set("content_index_prev", strconv.Itoa(pageData.NextParams.ContentIndexPrev))
+			if pageData.NextParams.K != "" {
+				nextParams.Set("k", pageData.NextParams.K)
+			}
+			if pageData.NextParams.Vhi != "" {
+				nextParams.Set("vhi", pageData.NextParams.Vhi)
+			}
+			if pageData.NextParams.Vhm != "" {
+				nextParams.Set("vhm", pageData.NextParams.Vhm)
+			}
+			if pageData.NextParams.Vhn != "" {
+				nextParams.Set("vhn", pageData.NextParams.Vhn)
+			}
+		}}
+		if !lastItemIsSeparator {
+			@fragments.Separator("htmx-added-in !bg-neutral-700")
+		}
+		@fragments.AsyncLoader(fragments.AsyncLoaderProps{
+			BaseURL:     "/api/street",
+			Params:      nextParams,
+			Trigger:     "revealed",
+			Classes:     "py-16",
+			LoadingText: "Fetching more content...",
+		})
+	}
+}

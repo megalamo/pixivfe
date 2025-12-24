@@ -1,0 +1,172 @@
+// Copyright 2023 - 2025, VnPower and the PixivFE contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package partials
+
+import (
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
+	"strconv"
+)
+
+// CommentsModalProps holds the data for loading commetns.
+type CommentsModalProps struct {
+	IsHtmxRequest bool
+	ArtworkID     string
+	UserID        string
+	SanityLevel   int
+	CommentsData  *core.CommentsData // nil if async loaded
+}
+
+templ CommentsModal(props CommentsModalProps) {
+	<div
+		popover
+		id="comments"
+		class="modal-popover pointer-events-none open:pointer-events-auto
+				opacity-0 starting:open:opacity-0 open:opacity-100 transition-all transition-discrete duration-300
+				open:flex flex-col size-full max-w-4xl starting:open:translate-y-full translate-y-full open:translate-y-1/12 bg-neutral-900 border border-b-0 border-neutral-700 rounded-t-2xl mx-auto pb-16 z-30
+				block invisible open:visible"
+	>
+		<div
+			class="flex flex-wrap items-center justify-between border-b border-neutral-700 gap-4 sticky top-0 z-2 px-6 py-4"
+		>
+			<div class="text-lg font-medium">Comments</div>
+			<button
+				popovertarget="comments"
+				class="flex items-center justify-center size-8 cursor-pointer text-neutral-300 hover:text-neutral-100 hover:bg-neutral-700 active:scale-95 transition rounded-full p-1 -me-1"
+			>
+				<span class="material-symbols-rounded-24">close</span>
+			</button>
+		</div>
+		if props.IsHtmxRequest {
+			// Async loading scenario - load comments container via HTMX
+			<div
+				class="comments-content relative flex flex-col p-6 gap-6 h-full overflow-y-auto bg-neutral-900"
+				hx-get={ "/api/comments?type=artwork&id=" + props.ArtworkID + "&userid=" + props.UserID + "&sanitylevel=" + strconv.Itoa(props.SanityLevel) }
+				hx-trigger="intersect once"
+				hx-target="this"
+				hx-select=".comments-content"
+				hx-swap="outerHTML swap:100ms settle:200ms show:none"
+			>
+				// Loading skeleton while comments are being fetched
+				<div class="flex flex-col gap-6">
+					for range 4 {
+						<div class="flex gap-4">
+							<div class="size-10 bg-neutral-800 rounded-full animate-pulse"></div>
+							<div class="flex flex-col gap-2 flex-1">
+								<div class="h-4 bg-neutral-800 rounded animate-pulse w-24"></div>
+								<div class="h-16 bg-neutral-800 rounded animate-pulse"></div>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		} else if props.CommentsData != nil {
+			// Static loading scenario - render comments immediately
+			// 
+			// NOTE: CommentsData is only nil if CommentOff == 1,
+			// and opening this modal is blocked in the UI if so
+			<div class="comments-content relative flex flex-col p-6 gap-6 h-full overflow-y-auto bg-neutral-900">
+				if props.CommentsData.Count > 0 {
+					// First comment
+					for _, comment := range props.CommentsData.Comments[:1] {
+						@Comment(comment)
+					}
+					// Remainder comments, if more than 1
+					if props.CommentsData.Count > 1 {
+						for _, comment := range props.CommentsData.Comments[1:] {
+							<hr class="border-neutral-800"/>
+							@Comment(comment)
+						}
+					}
+					<hr class="border-neutral-800"/>
+					<div class="flex flex-col items-center w-fit font-medium text-neutral-500 fill-neutral-500 rounded-lg gap-2 m-8 mb-12 mx-auto">
+						<span class="material-symbols-rounded-24">circle</span>
+						No more comments!
+					</div>
+				} else {
+					<div class="flex flex-col items-center w-fit font-medium text-neutral-500 fill-neutral-500 rounded-lg gap-2 m-8 mb-12 mx-auto">
+						<span class="material-symbols-rounded-24">indeterminate_question_box</span>
+						No one has commented on this work yet.
+					</div>
+				}
+			</div>
+		}
+	</div>
+}
+
+// Comment renders a [core.Comment].
+templ Comment(comment *core.Comment) {
+	{{ rtData := template.RelativeTime(comment.CommentDate) }}
+	<div class="flex shrink-0 items-start gap-4">
+		if !comment.IsDeletedUser {
+			<a
+				href={ templ.URL("/users/" + comment.UserID + "?category=bookmarks") }
+				class="contents"
+			>
+				<img
+					src={ comment.Img }
+					alt={ comment.Username }
+					loading="lazy"
+					class="aspect-square object-cover size-10 shrink-0 rounded-full avatar-outline-glow"
+				/>
+			</a>
+		} else {
+			<img
+				src="/img/deleted.png"
+				alt={ comment.Username }
+				loading="lazy"
+				class="aspect-square object-cover size-10 shrink-0 rounded-full"
+			/>
+		}
+		<div class="flex flex-col w-full gap-2">
+			<div class="flex flex-wrap items-baseline text-sm text-neutral-400 gap-y-0.5 gap-x-1.5">
+				if !comment.IsDeletedUser {
+					<a href={ templ.URL("/users/" + comment.UserID + "?category=bookmarks") } class="text-neutral-100 font-semibold animated-underline">
+						{ comment.Username }
+					</a>
+				} else {
+					<p class="text-neutral-400 font-semibold">Deleted user</p>
+				}
+				if comment.UserID == comment.WorkUserID {
+					<div class="badge-primary">Author</div>
+				}
+				<div class="select-none">•</div>
+				<div title={ template.NaturalTime(comment.CommentDate) }>
+					{ rtData.Value } { rtData.Description }
+					if rtData.Time != "" {
+						{ " " }{ rtData.Time }
+					}
+				</div>
+			</div>
+			<!-- Comment-->
+			<p class="flex flex-wrap text-wrap wrap-anywhere text-neutral-300 text-base/7 gap-2">
+				@templ.Raw(comment.Comment)
+			</p>
+			if comment.HasReplies {
+				{{
+					replyText := "replies"
+					if len(comment.Replies) == 1 {
+						replyText = "reply"
+					}
+				}}
+				<details class="group mt-2" open>
+					<summary class="tonal-button-neutral text-xs font-medium">
+						<span class="inline group-open:hidden">
+							Read { template.PrettyNumber(len(comment.Replies)) } { replyText }
+						</span>
+						<span class="hidden group-open:inline">
+							Hide { replyText }
+						</span>
+					</summary>
+					<!-- Replies container -->
+					<div class="flex flex-col gap-6 mt-6">
+						for _, reply := range comment.Replies {
+							@Comment(reply)
+						}
+					</div>
+				</details>
+			}
+		</div>
+	</div>
+}
