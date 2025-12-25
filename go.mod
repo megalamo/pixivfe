@@ -4,7 +4,7 @@ module codeberg.org/pixivfe/pixivfe/v3
 // (ref: https://go.dev/ref/mod#go-mod-file-go).
 //
 // When bumping the Go version, remember to update CI resources, Dockerfiles, and the READMEs.
-go 1.25.0
+go 1.25.5
 
 require (
 	// actor/message-passing library
