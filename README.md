@@ -44,7 +44,7 @@ For self-hosting, we maintain a [setup guide](https://pixivfe-docs.pages.dev/hos
 
 For more information, installation guides, and our development roadmap, visit [our documentation](https://pixivfe-docs.pages.dev/).
 
-For support, questions, or feedback, join our [Matrix room](https://matrix.to/#/#pixivfe:4d2.org) or use the [issue tracker](https://codeberg.org/PixivFE/PixivFE/issues) for bug reports. You can also contact [VnPower](https://loang.net/~vnpower/me#contact) directly.
+For support, questions, or feedback, join our [Matrix room](https://matrix.to/#/#pixivfe:4d2.org) or use the [issue tracker](https://codeberg.org/PixivFE/PixivFE/issues). You can also contact [VnPower](https://loang.net/~vnpower/me#contact) directly.
 
 ## Why should I use it?
 
@@ -60,12 +60,12 @@ PixivFE is not a product developed by pixiv, nor is it intended as a content scr
 
 We use GNU gettext to translate PixivFE's UI to languages other than English.
 
-To translate 
+To translate
 
 1. Wrap strings to translate inside `i18n.` functions (see [./i18n/doc.go](i18n/doc.go))
 2. Generate translation source (`./po/pixivfe.pot`) by running `./build.sh i18n_extract i18n_validate`
 3. Modify the translation target of a specific language (`./po/<lang>.po`)
-    - edit the file directly 
+    - edit the file directly
     - edit in Weblate (web interface)
 
 [For more detals, see ./docs/dev/i18n.md.](./docs/dev/i18n.md)
