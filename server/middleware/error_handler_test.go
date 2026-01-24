@@ -9,17 +9,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/megalamo/pixivfe/server/request_context"
 	"github.com/stretchr/testify/assert"
+
+	"codeberg.org/pixivfe/pixivfe/v3/server/request_context"
 )
 
 // createTestRequest creates a test HTTP request with request context.
 func createTestRequest(t *testing.T) *http.Request {
 	t.Helper()
+
 	req := httptest.NewRequest("GET", "/test", nil)
 
 	// Add request context
 	ctx := request_context.WithRequestContext(req.Context(), req, func(*http.Request) (string, error) { return "test-token", nil })
+
 	req = req.WithContext(ctx)
 
 	return req
@@ -30,6 +33,7 @@ func TestCatchError_Success(t *testing.T) {
 	handler := CatchError(func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "success"}`))
+
 		return nil
 	})
 	req := createTestRequest(t)
@@ -39,9 +43,11 @@ func TestCatchError_Success(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, rr.Code)
 	}
+
 	if body := rr.Body.String(); body != `{"status": "success"}` {
 		t.Errorf("Expected body %q, got %q", `{"status": "success"}`, body)
 	}
+
 	if ctx := request_context.FromRequest(req); ctx.RequestError != nil {
 		t.Errorf("Expected no error in context, got %v", ctx.RequestError)
 	}
