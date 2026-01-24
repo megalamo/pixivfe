@@ -54,6 +54,8 @@ require (
 
 require github.com/mitchellh/go-server-timing v1.0.1
 
+require github.com/gin-gonic/gin v1.11.0
+
 require (
 	aidanwoods.dev/go-result v0.3.1 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
