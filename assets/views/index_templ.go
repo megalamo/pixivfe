@@ -276,7 +276,7 @@ func Index(pageData core.IndexData) templ.Component {
 						templ_7745c5c3_Err = fragments.ArtworkGridItem(artwork, fragments.ArtworkGridItemProps{
 							ShowTitle:      true,
 							ShowArtist:     false,
-							ContainerClass: "flex flex-col w-3/10",
+							ContainerClass: "flex flex-col w-3/10 gap-1.5",
 							UsePathLogic:   false,
 						}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
@@ -357,7 +357,7 @@ func Index(pageData core.IndexData) templ.Component {
 						templ_7745c5c3_Err = fragments.ArtworkGridItem(artwork, fragments.ArtworkGridItemProps{
 							ShowTitle:      true,
 							ShowArtist:     false,
-							ContainerClass: "flex flex-col w-3/10",
+							ContainerClass: "flex flex-col w-3/10 gap-1.5",
 							UsePathLogic:   false,
 						}).Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
