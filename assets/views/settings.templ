@@ -59,6 +59,8 @@ templ Settings(props core.SettingsPageData) {
 					@fragments.Separator("!bg-neutral-700 my-2")
 					@settingsBehaviorVisualEffects()
 					@fragments.Separator("!bg-neutral-700 my-2")
+					@settingsBehaviorBookmarkVisibility()
+					@fragments.Separator("!bg-neutral-700 my-2")
 					@settingsBehaviorNewTab()
 					@fragments.Separator("!bg-neutral-700 my-2")
 					@settingsBehaviorLogoStyle()
@@ -350,6 +352,36 @@ templ settingsBehaviorImageProxy() {
 	<div class="form-htmx-target hidden"></div>
 }
 
+templ settingsBehaviorBookmarkVisibility() {
+	{{ cd := CommonData(ctx) }}
+	{{ defaultBookmarkVisibility := cd.CookieList[cookie.BookmarkDefaultPrivateCookie] }}
+	@fragments.ContentHeading(fragments.ContentHeadingProps{
+		Title:     "Bookmark visibility",
+		TitleSize: "lg",
+		Classes:   "-mb-2",
+	})
+	<p>Set default visibility for quick bookmarks (on thumbnails).</p>
+	<form id="bookmark_visibility_form" action="/settings/bookmark_visibility" method="post" class="contents">
+		@fragments.Fieldset(fragments.FieldsetConfig{
+			InputName: "bookmark_visibility",
+			InputType: "checkbox",
+			Options: []fragments.FieldsetOption{
+				{
+					ID:       "bookmark_visibility",
+					Label:    "Private by default",
+					Value:    "on",
+					HelpText: "Choose whether bookmarks should be saved privately by default",
+					Checked:  defaultBookmarkVisibility == "true",
+				},
+			},
+		})
+		<button type="submit" class="outlined-button text-sm font-medium">
+			Save
+		</button>
+	</form>
+	<div class="form-htmx-target hidden"></div>
+}
+
 templ settingsBehaviorVisualEffects() {
 	{{ cd := CommonData(ctx) }}
 	{{ seasonalEffectsEnabled := cd.CookieList[cookie.SeasonalEffectsEnabledCookie] }}
@@ -367,7 +399,7 @@ templ settingsBehaviorVisualEffects() {
 				{
 					ID:       "seasonal_effects",
 					Label:    "Enable seasonal effects",
-					Value:    "seasonal-effects",
+					Value:    "on",
 					HelpText: "Choose whether seasonal effects should be shown for artworks with special tags (ex. #pixivSakuraEffect).",
 					Checked:  seasonalEffectsEnabled == "true",
 				},
