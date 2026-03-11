@@ -61,6 +61,28 @@ func handleSelectedProxy(w http.ResponseWriter, r *http.Request, selectedProxy s
 	return fmt.Sprintf("Image proxy server set successfully to: %s", proxyURL), nil
 }
 
+func setBookmarkVisibility(w http.ResponseWriter, r *http.Request) (string, error) {
+	var isSuccessful bool
+
+	bookmarkVisibility := r.FormValue("bookmark_visibility")
+
+	if bookmarkVisibility == "on" {
+		untrusted.SetCookie(w, r, cookie.BookmarkDefaultPrivateCookie, "true")
+
+		isSuccessful = true
+	} else {
+		untrusted.SetCookie(w, r, cookie.BookmarkDefaultPrivateCookie, "false")
+
+		isSuccessful = true
+	}
+
+	if isSuccessful {
+		return "Bookmark visilibity preference updated successfully.", nil
+	}
+
+	return "", errors.New("Invalid bookmark visilibity preference.")
+}
+
 func setVisualEffects(w http.ResponseWriter, r *http.Request) (string, error) {
 	var isSuccessful bool
 
@@ -294,6 +316,7 @@ var actions = map[string]func(http.ResponseWriter, *http.Request) (string, error
 	"novel_font_type":      setNovelFontType,
 	"novel_view_mode":      setNovelViewMode,
 	"thumbnail_to_new_tab": setThumbnailToNewTab,
+	"bookmark_visibility":  setBookmarkVisibility,
 	"visual_effects":       setVisualEffects,
 	"set_cookie":           setCookie,
 	"clear_cookie":         clearCookie,
