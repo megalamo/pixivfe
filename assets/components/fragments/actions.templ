@@ -234,7 +234,13 @@ templ DeleteBookmarkPartial(illust core.Illust) {
 
 templ QuickAddBookmark(props AddBookmarkData) {
 	{{
-		cd := CommonData(ctx)
+    cd := CommonData(ctx)
+    bookmarkVisibility := cd.CookieList[cookie.BookmarkDefaultPrivateCookie]
+    bookmarkVisibilityRaw := "off"
+
+    if bookmarkVisibility == "true" {
+       bookmarkVisibilityRaw = "on"
+    }
 
 		var returnPath = cd.CurrentPath
 		if cd.HtmxCurrentPath != "" {
@@ -265,6 +271,11 @@ templ QuickAddBookmark(props AddBookmarkData) {
 			type="hidden"
 			name="return_path"
 			value={ returnPath }
+		/>
+		<input
+			type="hidden"
+			name="private"
+			value={ bookmarkVisibilityRaw }
 		/>
 		<button
 			type="submit"
