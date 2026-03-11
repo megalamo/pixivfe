@@ -11,9 +11,9 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 
-	"github.com/megalamo/pixivfe/core"
-	"github.com/megalamo/pixivfe/core/cookie"
-	"github.com/megalamo/pixivfe/server/template"
+	"codeberg.org/pixivfe/pixivfe/v3/core"
+	"codeberg.org/pixivfe/pixivfe/v3/core/cookie"
+	"codeberg.org/pixivfe/pixivfe/v3/server/template"
 )
 
 // LikeData represents the data required to like a work.
@@ -521,6 +521,12 @@ func QuickAddBookmark(props AddBookmarkData) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		cd := CommonData(ctx)
+		bookmarkVisibility := cd.CookieList[cookie.BookmarkDefaultPrivateCookie]
+		bookmarkVisibilityRaw := "off"
+
+		if bookmarkVisibility == "true" {
+			bookmarkVisibilityRaw = "on"
+		}
 
 		var returnPath = cd.CurrentPath
 		if cd.HtmxCurrentPath != "" {
@@ -533,7 +539,7 @@ func QuickAddBookmark(props AddBookmarkData) templ.Component {
 		var templ_7745c5c3_Var28 templ.SafeURL
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/self/addBookmark/" + props.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 245, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 251, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -546,7 +552,7 @@ func QuickAddBookmark(props AddBookmarkData) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(props.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 262, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 268, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -559,13 +565,26 @@ func QuickAddBookmark(props AddBookmarkData) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(returnPath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 267, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 273, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\"> <button type=\"submit\" class=\"flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90\"><span class=\"material-symbols-rounded-20\">favorite</span></button></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\"> <input type=\"hidden\" name=\"private\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var31 string
+		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(bookmarkVisibilityRaw)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 278, Col: 32}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\"> <button type=\"submit\" class=\"flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90\"><span class=\"material-symbols-rounded-20\">favorite</span></button></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -589,9 +608,9 @@ func QuickDeleteBookmark(props DeleteBookmarkData) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var31 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var31 == nil {
-			templ_7745c5c3_Var31 = templ.NopComponent
+		templ_7745c5c3_Var32 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var32 == nil {
+			templ_7745c5c3_Var32 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		cd := CommonData(ctx)
@@ -609,46 +628,46 @@ func QuickDeleteBookmark(props DeleteBookmarkData) templ.Component {
 			actionURL = "/self/deleteBookmark/" + props.BookmarkData.ID
 		}
 		if actionURL != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<form action=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<form action=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var32 templ.SafeURL
-			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(actionURL))
+			var templ_7745c5c3_Var33 templ.SafeURL
+			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(actionURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 300, Col: 32}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" method=\"post\" hx-target=\"this\" hx-target-4*=\"body\" hx-swap=\"outerHTML show:none\" hx-push-url=\"false\" hx-indicator=\"this\" class=\"contents\"><input type=\"hidden\" name=\"render_type\" value=\"quick\"> <input type=\"hidden\" name=\"artwork_id\" value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var33 string
-			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(props.ID)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 317, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 311, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\"> <input type=\"hidden\" name=\"return_path\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" method=\"post\" hx-target=\"this\" hx-target-4*=\"body\" hx-swap=\"outerHTML show:none\" hx-push-url=\"false\" hx-indicator=\"this\" class=\"contents\"><input type=\"hidden\" name=\"render_type\" value=\"quick\"> <input type=\"hidden\" name=\"artwork_id\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var34 string
-			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(returnPath)
+			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(props.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 322, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 328, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "\"> <button type=\"submit\" class=\"flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90\"><span class=\"material-symbols-rounded-fill-20\">favorite</span></button></form>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "\"> <input type=\"hidden\" name=\"return_path\" value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var35 string
+			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(returnPath)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `assets/components/fragments/actions.templ`, Line: 333, Col: 22}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\"> <button type=\"submit\" class=\"flex flex-col gap-2 absolute bottom-2 right-2 justify-center items-center transition rounded-full p-2 z-3 cursor-pointer select-none hover:bg-black bg-black/80 active:scale-90\"><span class=\"material-symbols-rounded-fill-20\">favorite</span></button></form>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
