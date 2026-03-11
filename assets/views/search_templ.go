@@ -578,6 +578,24 @@ func searchOptions(pageData core.SearchData) templ.Component {
 						Value:   "date",
 						Checked: activeOrder == "date",
 					},
+					{
+						ID:      "popular_d",
+						Label:   "Most popular",
+						Value:   "popular_d",
+						Checked: activeOrder == "popular_d",
+					},
+					{
+						ID:      "popular_male_d",
+						Label:   "Most popular with male",
+						Value:   "popular_male_d",
+						Checked: activeOrder == "popular_male_d",
+					},
+					{
+						ID:      "popular_female_d",
+						Label:   "Most popular with female",
+						Value:   "popular_female_d",
+						Checked: activeOrder == "popular_female_d",
+					},
 				},
 			}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
